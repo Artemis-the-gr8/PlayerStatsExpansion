@@ -1,13 +1,15 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
+import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.gmail.artemis.the.gr8.playerstats.api.PlayerStats;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
+
+import java.util.LinkedHashMap;
+import java.util.regex.Pattern;
 
 public class PlayerStatsExpansion extends PlaceholderExpansion {
 
@@ -45,19 +47,29 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
 
     /**format: %playerstats_<\stat_name>_<\sub_stat_name>_<\target>_<\player-name>% */
     @Override
-    public String onRequest(OfflinePlayer player, String arg) {
-        PlayerStats api = PlayerStats.getAPI();
-        if (arg.equalsIgnoreCase("prefix")) {
-            return ChatColor.GRAY + "[" + ChatColor.GOLD + "PlayerStats" + ChatColor.GRAY + "]";
-        } else if (arg.equalsIgnoreCase("demon")) {
-            return Serializer.serialize(MiniMessage.miniMessage().deserialize("<gradient:#f74040:#FF6600:#f74040>fire demon</gradient>"));
-        } else if (arg.equalsIgnoreCase("stats")) {
-            return api.getTopStats(Statistic.ANIMALS_BRED, null, null).getFormattedString();
-        } else if (arg.equalsIgnoreCase("stat")) {
-            return api.getPlayerStat(player.getName(), Statistic.KILL_ENTITY, null, EntityType.ZOMBIE).getFormattedString();
-        } else if (arg.equalsIgnoreCase("statstring")) {
-            return api.getPlayerStat(player.getName(), Statistic.KILL_ENTITY, null, EntityType.ZOMBIE).toString();
+    public String onRequest(OfflinePlayer player, String args) {
+        TextComponent result = switch (args) {
+            case "prefix" -> playerStats.getFormatter().getPluginPrefix();
+            case "rainbowprefix" -> playerStats.getFormatter().getRainbowPluginPrefix();
+            case "prefixtitle" -> playerStats.getFormatter().getPluginPrefixAsTitle();
+            case "rainbowprefixtitle" -> playerStats.getFormatter().getRainbowPluginPrefixAsTitle();
+            case "demon" -> (TextComponent) MiniMessage.miniMessage().deserialize("<gradient:#f74040:#FF6600:#f74040>fire demon</gradient>");
+            default -> null;
+        };
+
+        if (result != null) {
+            return ComponentToString(result);
         }
-        return null;
+        if (!Regex.isValid(args)) {
+            return null;
+        }
+
+    }
+
+    private String ComponentToString(TextComponent component) {
+        if (component == null) {
+            return null;
+        }
+        return playerStats.getFormatter().TextComponentToString(component);
     }
 }
