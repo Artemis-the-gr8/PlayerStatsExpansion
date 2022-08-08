@@ -45,7 +45,7 @@
         <dependency>
             <groupId>com.gmail.artemis.the.gr8</groupId>
             <artifactId>PlayerStats</artifactId>
-            <version>1.6</version>
+            <version>1.6.1</version>
         </dependency>
     </dependencies>
 
