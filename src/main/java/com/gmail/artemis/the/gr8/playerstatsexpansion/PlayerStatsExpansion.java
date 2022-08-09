@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 public class PlayerStatsExpansion extends PlaceholderExpansion {
 
     private static StatManager statManager;
-    private static Formatter statFormatter;
+    private static ApiFormatter statFormatter;
 
     private static StatCache statCache;
 
@@ -83,33 +83,32 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private String getStatResult(String args) {
-        Args processedArgss = new Args(args);
-        if (processedArgss.target == null) {
+        Args processedArgs = new Args(args);
+        if (processedArgs.target == null) {
             logWarning("missing top/server/player selection");
             return null;
         }
 
-        return switch (processedArgss.target) {
-            case PLAYER -> getPlayerStatResult(processedArgss);
-            case SERVER -> getServerStatResult(processedArgss);
-            case TOP -> getTopStatResult(processedArgss);
+        return switch (processedArgs.target) {
+            case PLAYER -> getPlayerStatResult(processedArgs);
+            case SERVER -> getServerStatResult(processedArgs);
+            case TOP -> getTopStatResult(processedArgs);
         };
     }
 
-    private @Nullable String getPlayerStatResult(@NotNull Args processedArgss) {
-        StatRequest<Integer> playerRequest = getPlayerRequest(processedArgss);
+    private @Nullable String getPlayerStatResult(@NotNull Args processedArgs) {
+        StatRequest<Integer> playerRequest = getPlayerRequest(processedArgs);
         if (playerRequest == null) {
             return null;
         }
 
         StatResult<Integer> result = playerRequest.execute();
-        if (processedArgss.isRawNumberRequest) {
+        if (processedArgs.isRawNumberRequest) {
             return result.getNumericalValue().toString();
         }
         return result.getFormattedString();
     }
 
-    //TODO this one only does raw numbers for now
     private @Nullable String getServerStatResult(@NotNull Args processedArgs) {
         StatRequest<Long> serverRequest = getServerRequest(processedArgs);
         if (serverRequest == null) {
@@ -129,7 +128,12 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             statCache.remove(stat);
             return null;
         }
-        return transformIntoServerStatResult(result.getNumericalValue()) + "";
+        else if (processedArgs.isRawNumberRequest) {
+            return getRawServerStatResult(result.getNumericalValue()) + "";
+        }
+        else {
+            return getFormattedServerStatResult(result.getNumericalValue(), stat);
+        }
     }
 
     private @Nullable String getTopStatResult(Args processedArgs) {
@@ -166,7 +170,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         String[] playerNames = numbers.keySet().toArray(new String[0]);
         String playerName = playerNames[lineNumber-1];
         TextComponent result =
-                statFormatter.formatSingleTopStatLine(
+                statFormatter.getFormattedTopStatLine(
                         lineNumber, playerName, numbers.get(playerName), processedArgs.getStatistic());
         return componentToString(result);
     }
@@ -242,15 +246,15 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
-        StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopListRequest(statRequest);
+        StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<TopStatResult> future =
                 CompletableFuture.supplyAsync(() -> (TopStatResult) newRequest.execute());
 
         statCache.store(newRequest.getStatisticSetting(), future);
     }
 
-    private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopListRequest(@NotNull StatRequest<?> statRequest) {
-        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatListRequest();
+    private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
+        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
         Statistic stat = statRequest.getStatisticSetting();
         return switch (stat.getType()) {
             case UNTYPED -> generator.untyped(stat);
@@ -277,7 +281,13 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         };
     }
 
-    private long transformIntoServerStatResult(LinkedHashMap<String, Integer> allStats) {
+    private String getFormattedServerStatResult(LinkedHashMap<String, Integer> allStats, Statistic statistic) {
+        long result = getRawServerStatResult(allStats);
+        TextComponent prettyResult = statFormatter.getFormattedServerStat(result, statistic);
+        return componentToString(prettyResult);
+    }
+
+    private long getRawServerStatResult(LinkedHashMap<String, Integer> allStats) {
         List<Integer> numbers = allStats
                 .values()
                 .parallelStream()
