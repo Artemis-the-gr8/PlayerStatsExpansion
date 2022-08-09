@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.logging.Logger;
 
 public class PlayerStatsExpansion extends PlaceholderExpansion {
 
@@ -51,13 +52,15 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         PlayerStats playerStats;
         try {
             playerStats = PlayerStats.getAPI();
+            logWarning("canRegister() inside try");
         } catch (IllegalStateException e) {
-            Bukkit.getLogger().warning("Unable to connect to PlayerStats' API!");
+            logWarning("Unable to connect to PlayerStats' API!");
             return false;
         }
         statManager = playerStats.getStatManager();
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
+        logWarning("canRegister() initialized all the classes");
         return true;
     }
 
@@ -76,7 +79,9 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         if (prefix != null) {
             return componentToString(prefix);
         }
-        return getStatResult(args);
+        String result = getStatResult(args);
+        logWarning("onRequest returning getStatResult(args): " + result);
+        return result;
     }
 
     private String getStatResult(String args) {
@@ -118,7 +123,6 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         CompletableFuture<TopStatResult> future = statCache.get(stat);
         if (Bukkit.isPrimaryThread()) {
             if (!future.isDone()) {
-                logConcurrencyWarning();
                 return "Processing...";
             }
         }
@@ -141,7 +145,6 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         CompletableFuture<TopStatResult> future = statCache.get(stat);
         if (Bukkit.isPrimaryThread()) {
             if (!future.isDone()) {
-                logConcurrencyWarning();
                 return "Processing...";
             }
         }
@@ -307,14 +310,8 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return statFormatter.TextComponentToString(component);
     }
 
-    private void logConcurrencyWarning() {
-        logWarning("Another plugin is requesting a placeholder from the main Thread! " +
-                "To prevent server lag, PlayerStats will not run calculations on the main Thread," +
-                "so no value will be returned for this request.");
-    }
-
-    private void logWarning(String msg) {
-        Bukkit.getLogger().warning(msg);
-        System.out.println(">:(");
+    public static void logWarning(String msg) {
+        Logger myLogger = Logger.getLogger("PlayerStatsExpansion");
+        myLogger.warning(msg);
     }
 }
