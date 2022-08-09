@@ -3,9 +3,9 @@ package com.gmail.artemis.the.gr8.playerstatsexpansion;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.gmail.artemis.the.gr8.playerstats.api.*;
-import com.gmail.artemis.the.gr8.playerstats.enums.Target;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
+import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -16,13 +16,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.concurrent.*;
 
 public class PlayerStatsExpansion extends PlaceholderExpansion {
 
-    private static PlayerStats playerStats;
     private static StatManager statManager;
     private static Formatter statFormatter;
 
+    private static StatCache statCache;
 
     @Override
     public String getIdentifier() {
@@ -46,6 +48,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
 
     @Override
     public boolean canRegister() {
+        PlayerStats playerStats;
         try {
             playerStats = PlayerStats.getAPI();
         } catch (IllegalStateException e) {
@@ -54,6 +57,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
         statManager = playerStats.getStatManager();
         statFormatter = playerStats.getFormatter();
+        statCache = StatCache.getInstance();
         return true;
     }
 
@@ -70,96 +74,139 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         };
 
         if (prefix != null) {
-            return ComponentToString(prefix);
+            return componentToString(prefix);
         }
         return getStatResult(args);
     }
 
     private String getStatResult(String args) {
-        PlaceholderString placeholderArgs = new PlaceholderString(args);
-        boolean getRawNumber = placeholderArgs.extractRawKeyword();
-
-        Target target = placeholderArgs.extractTarget();
-        if (target == null) {
+        ProcessedArg processedArg = new ProcessedArg(args);
+        if (processedArg.target == null) {
             logWarning("missing top/server/player selection");
             return null;
         }
 
-        switch (target) {
-            case PLAYER -> {
-                StatRequest<Integer> playerRequest = getPlayerRequest(placeholderArgs);
-                if (playerRequest != null) {
-                    return getPlayerStatResult(playerRequest, getRawNumber);
-                }
+        return switch (processedArg.target) {
+            case PLAYER -> getPlayerStatResult(processedArg);
+            case SERVER -> getServerStatResult(processedArg);
+            case TOP -> getTopStatResult(processedArg);
+        };
+    }
+
+    private @Nullable String getPlayerStatResult(@NotNull ProcessedArg processedArg) {
+        StatRequest<Integer> playerRequest = getPlayerRequest(processedArg);
+        if (playerRequest == null) {
+            return null;
+        }
+
+        StatResult<Integer> result = playerRequest.execute();
+        if (processedArg.isRawNumberRequest) {
+            return result.getNumericalValue().toString();
+        }
+        return result.getFormattedString();
+    }
+
+    //TODO this one only does raw numbers for now
+    private @Nullable String getServerStatResult(@NotNull ProcessedArg processedArg) {
+        StatRequest<Long> serverRequest = getServerRequest(processedArg);
+        if (serverRequest == null) {
+            return null;
+        }
+        updateCacheIfNeeded(serverRequest);
+        Statistic stat = serverRequest.getStatisticSetting();
+
+        CompletableFuture<TopStatResult> future = statCache.get(stat);
+        if (Bukkit.isPrimaryThread()) {
+            if (!future.isDone()) {
+                logConcurrencyWarning();
+                return "Processing...";
             }
-            case SERVER -> {
-                //check cache
-                //if in cache: convert from cache
-                //if not in cache: put in cache
-                StatRequest<Long> serverRequest = getServerRequest(placeholderArgs);
+        }
+        TopStatResult result = tryToGetCompletableFutureResult(future);
+        if (result == null) {
+            statCache.remove(stat);
+            return null;
+        }
+        return transformIntoServerStatResult(result.getNumericalValue()) + "";
+    }
 
+    private @Nullable String getTopStatResult(ProcessedArg processedArg) {
+        StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArg);
+        if (topRequest == null) {
+            return null;
+        }
+        updateCacheIfNeeded(topRequest);
+        Statistic stat = topRequest.getStatisticSetting();
+
+        CompletableFuture<TopStatResult> future = statCache.get(stat);
+        if (Bukkit.isPrimaryThread()) {
+            if (!future.isDone()) {
+                logConcurrencyWarning();
+                return "Processing...";
             }
-            case TOP -> {
-                //check cache
-                //if in cache: convert from cache
-                //if not in cache: put in cache
-                StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(placeholderArgs);
-            }
         }
-        return null;
-    }
-
-    private String getPlayerStatResult(@NotNull StatRequest<Integer> statRequest, boolean getRawNumber) {
-        StatResult<Integer> statResult = statRequest.execute();
-        if (getRawNumber) {
-            return statResult.getNumericalValue().toString();
+        TopStatResult result = tryToGetCompletableFutureResult(future);
+        if (result == null) {
+            statCache.remove(stat);
+            return null;
         }
-        return statResult.getFormattedString();
-    }
-
-    private String getServerStatResult(@NotNull StatRequest<Long> statRequest, boolean getRawNumber) {
-        if (!isLoadedInCache(statRequest.getStatistic())) {
-            //calculate and store in cache
+        else if (processedArg.isRawNumberRequest) {
+            int lineNumber = processedArg.topListSize;
+            return getSingleNumberFromTopStatResult(result, lineNumber) + "";
         }
-        //get long from cache -> method in cache
-    }
-
-    private String getTopStatResult(@NotNull StatRequest<LinkedHashMap<String, Integer>> statRequest, boolean getRawNumber) {
-        if (!isLoadedInCache(statRequest.getStatistic())) {
-            //calculate and store in cache
+        else {
+            return getSingleFormattedTopStatLine(result, processedArg);
         }
-        //get specific line from cache -> method in cache
     }
 
-    private boolean isLoadedInCache(Statistic statistic) {
-        StatCache cache = StatCache.getInstance();
-        return cache.hasRecordOf(statistic);
+    private String getSingleFormattedTopStatLine (TopStatResult topStats, ProcessedArg processedArg) {
+        int lineNumber = processedArg.topListSize;
+        LinkedHashMap<String, Integer> numbers = topStats.getNumericalValue();
+        String[] playerNames = numbers.keySet().toArray(new String[0]);
+        String playerName = playerNames[lineNumber-1];
+        TextComponent result =
+                statFormatter.formatSingleTopStatLine(
+                        lineNumber, playerName, numbers.get(playerName), processedArg.getStatistic());
+        return componentToString(result);
     }
 
-    private @Nullable StatRequest<Integer> getPlayerRequest(PlaceholderString args) {
-        String playerName = args.extractPlayerName();
+    private int getSingleNumberFromTopStatResult(TopStatResult topStats, int lineNumber) {
+        LinkedHashMap<String, Integer> numbers = topStats.getNumericalValue();
+        String[] playerNames = numbers.keySet().toArray(new String[0]);
+        return numbers.get(playerNames[lineNumber-1]);
+    }
+
+    private void updateCacheIfNeeded(StatRequest<?> statRequest) {
+        Statistic stat = statRequest.getStatisticSetting();
+        if (!statCache.hasRecordOf(stat)) {
+            saveToCache(statRequest);
+        }
+    }
+
+    private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArg processedArg) {
+        String playerName = processedArg.playerName;
         if (playerName == null) {
             logWarning("missing or invalid player-name");
             return null;
         }
 
         RequestGenerator<Integer> requestGenerator = statManager.playerStatRequest(playerName);
-        return createRequest(requestGenerator, args);
+        return createRequest(requestGenerator, processedArg);
     }
 
-    private @Nullable StatRequest<Long> getServerRequest(PlaceholderString args) {
+    private @Nullable StatRequest<Long> getServerRequest(ProcessedArg processedArg) {
         RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
-        return createRequest(requestGenerator, args);
+        return createRequest(requestGenerator, processedArg);
     }
 
-    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(PlaceholderString args) {
-        int topListSize = args.extractTopListSize();
+    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArg processedArg) {
+        int topListSize = processedArg.topListSize;
 
         RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
-        return createRequest(requestGenerator, args);
+        return createRequest(requestGenerator, processedArg);
     }
 
-    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, PlaceholderString args) {
+    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArg args) {
         Statistic stat = args.getStatistic();
         if (stat == null) {
             logWarning("missing or invalid Statistic");
@@ -193,14 +240,81 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
     }
 
-    private @Nullable String ComponentToString(TextComponent component) {
+    private void saveToCache(StatRequest<?> statRequest) {
+        StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopListRequest(statRequest);
+        final CompletableFuture<TopStatResult> future =
+                CompletableFuture.supplyAsync(() -> (TopStatResult) newRequest.execute());
+
+        statCache.store(newRequest.getStatisticSetting(), future);
+    }
+
+    private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopListRequest(@NotNull StatRequest<?> statRequest) {
+        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatListRequest();
+        Statistic stat = statRequest.getStatisticSetting();
+        return switch (stat.getType()) {
+            case UNTYPED -> generator.untyped(stat);
+            case ENTITY -> {
+                if (statRequest.getEntitySetting() != null) {
+                    yield generator.entityType(stat, statRequest.getEntitySetting());
+                } else {
+                    yield null;
+                }
+            }
+            case BLOCK, ITEM -> {
+                Material material = null;
+                if (statRequest.getBlockSetting() != null) {
+                    material = statRequest.getBlockSetting();
+                } else if (statRequest.getItemSetting() != null) {
+                    material = statRequest.getItemSetting();
+                }
+                if (material != null) {
+                    yield generator.blockOrItemType(stat, material);
+                } else {
+                    yield null;
+                }
+            }
+        };
+    }
+
+    private long transformIntoServerStatResult(LinkedHashMap<String, Integer> allStats) {
+        List<Integer> numbers = allStats
+                .values()
+                .parallelStream()
+                .toList();
+        return numbers.parallelStream().mapToLong(Integer::longValue).sum();
+    }
+
+    private @Nullable TopStatResult tryToGetCompletableFutureResult(CompletableFuture<TopStatResult> future) {
+        TopStatResult result = null;
+        try {
+            result = future.get(60, TimeUnit.SECONDS);
+        } catch (CancellationException canceled) {
+            logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
+        } catch (InterruptedException interrupted) {
+            logWarning("This thread was interrupted while waiting for StatResults");
+        } catch (ExecutionException exception) {
+            logWarning("An ExecutionException occurred while trying to get all statistic values");
+        } catch (TimeoutException timeoutException) {
+            logWarning("a PlaceHolder request has timed out");
+        }
+        return result;
+    }
+
+    private @Nullable String componentToString(TextComponent component) {
         if (component == null) {
             return null;
         }
-        return playerStats.getFormatter().TextComponentToString(component);
+        return statFormatter.TextComponentToString(component);
+    }
+
+    private void logConcurrencyWarning() {
+        logWarning("Another plugin is requesting a placeholder from the main Thread! " +
+                "To prevent server lag, PlayerStats will not run calculations on the main Thread," +
+                "so no value will be returned for this request.");
     }
 
     private void logWarning(String msg) {
         Bukkit.getLogger().warning(msg);
+        System.out.println(">:(");
     }
 }
