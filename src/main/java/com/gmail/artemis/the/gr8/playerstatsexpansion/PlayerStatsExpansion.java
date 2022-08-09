@@ -52,7 +52,6 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         PlayerStats playerStats;
         try {
             playerStats = PlayerStats.getAPI();
-            logWarning("canRegister() inside try");
         } catch (IllegalStateException e) {
             logWarning("Unable to connect to PlayerStats' API!");
             return false;
@@ -60,7 +59,6 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         statManager = playerStats.getStatManager();
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
-        logWarning("canRegister() initialized all the classes");
         return true;
     }
 
@@ -85,35 +83,35 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private String getStatResult(String args) {
-        ProcessedArg processedArg = new ProcessedArg(args);
-        if (processedArg.target == null) {
+        Args processedArgss = new Args(args);
+        if (processedArgss.target == null) {
             logWarning("missing top/server/player selection");
             return null;
         }
 
-        return switch (processedArg.target) {
-            case PLAYER -> getPlayerStatResult(processedArg);
-            case SERVER -> getServerStatResult(processedArg);
-            case TOP -> getTopStatResult(processedArg);
+        return switch (processedArgss.target) {
+            case PLAYER -> getPlayerStatResult(processedArgss);
+            case SERVER -> getServerStatResult(processedArgss);
+            case TOP -> getTopStatResult(processedArgss);
         };
     }
 
-    private @Nullable String getPlayerStatResult(@NotNull ProcessedArg processedArg) {
-        StatRequest<Integer> playerRequest = getPlayerRequest(processedArg);
+    private @Nullable String getPlayerStatResult(@NotNull Args processedArgss) {
+        StatRequest<Integer> playerRequest = getPlayerRequest(processedArgss);
         if (playerRequest == null) {
             return null;
         }
 
         StatResult<Integer> result = playerRequest.execute();
-        if (processedArg.isRawNumberRequest) {
+        if (processedArgss.isRawNumberRequest) {
             return result.getNumericalValue().toString();
         }
         return result.getFormattedString();
     }
 
     //TODO this one only does raw numbers for now
-    private @Nullable String getServerStatResult(@NotNull ProcessedArg processedArg) {
-        StatRequest<Long> serverRequest = getServerRequest(processedArg);
+    private @Nullable String getServerStatResult(@NotNull Args processedArgs) {
+        StatRequest<Long> serverRequest = getServerRequest(processedArgs);
         if (serverRequest == null) {
             return null;
         }
@@ -134,8 +132,8 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return transformIntoServerStatResult(result.getNumericalValue()) + "";
     }
 
-    private @Nullable String getTopStatResult(ProcessedArg processedArg) {
-        StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArg);
+    private @Nullable String getTopStatResult(Args processedArgs) {
+        StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArgs);
         if (topRequest == null) {
             return null;
         }
@@ -153,23 +151,23 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             statCache.remove(stat);
             return null;
         }
-        else if (processedArg.isRawNumberRequest) {
-            int lineNumber = processedArg.topListSize;
+        else if (processedArgs.isRawNumberRequest) {
+            int lineNumber = processedArgs.topListSize;
             return getSingleNumberFromTopStatResult(result, lineNumber) + "";
         }
         else {
-            return getSingleFormattedTopStatLine(result, processedArg);
+            return getSingleFormattedTopStatLine(result, processedArgs);
         }
     }
 
-    private String getSingleFormattedTopStatLine (TopStatResult topStats, ProcessedArg processedArg) {
-        int lineNumber = processedArg.topListSize;
+    private String getSingleFormattedTopStatLine (TopStatResult topStats, Args processedArgs) {
+        int lineNumber = processedArgs.topListSize;
         LinkedHashMap<String, Integer> numbers = topStats.getNumericalValue();
         String[] playerNames = numbers.keySet().toArray(new String[0]);
         String playerName = playerNames[lineNumber-1];
         TextComponent result =
                 statFormatter.formatSingleTopStatLine(
-                        lineNumber, playerName, numbers.get(playerName), processedArg.getStatistic());
+                        lineNumber, playerName, numbers.get(playerName), processedArgs.getStatistic());
         return componentToString(result);
     }
 
@@ -186,30 +184,30 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
     }
 
-    private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArg processedArg) {
-        String playerName = processedArg.playerName;
+    private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull Args processedArgs) {
+        String playerName = processedArgs.playerName;
         if (playerName == null) {
             logWarning("missing or invalid player-name");
             return null;
         }
 
         RequestGenerator<Integer> requestGenerator = statManager.playerStatRequest(playerName);
-        return createRequest(requestGenerator, processedArg);
+        return createRequest(requestGenerator, processedArgs);
     }
 
-    private @Nullable StatRequest<Long> getServerRequest(ProcessedArg processedArg) {
+    private @Nullable StatRequest<Long> getServerRequest(Args processedArgs) {
         RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
-        return createRequest(requestGenerator, processedArg);
+        return createRequest(requestGenerator, processedArgs);
     }
 
-    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArg processedArg) {
-        int topListSize = processedArg.topListSize;
+    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(Args processedArgs) {
+        int topListSize = processedArgs.topListSize;
 
         RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
-        return createRequest(requestGenerator, processedArg);
+        return createRequest(requestGenerator, processedArgs);
     }
 
-    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArg args) {
+    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, Args args) {
         Statistic stat = args.getStatistic();
         if (stat == null) {
             logWarning("missing or invalid Statistic");
