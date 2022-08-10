@@ -26,6 +26,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private static ApiFormatter statFormatter;
 
     private static StatCache statCache;
+    private TestListener testListener;
 
     @Override
     public String getIdentifier() {
@@ -59,10 +60,18 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         statManager = playerStats.getStatManager();
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
+
+        registerListener();
         return true;
     }
 
-    /**format: %playerstats_<\stat_name>_<\sub_stat_name>_<\target>_<\player-name>% */
+    private void registerListener() {
+        if (testListener == null) {
+            testListener = new TestListener();
+        }
+    }
+
+    /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
     @Override
     public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
@@ -75,6 +84,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         };
 
         if (prefix != null) {
+            registerListener();
             return componentToString(prefix);
         }
         return getStatResult(args);
@@ -113,9 +123,9 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             return null;
         }
         updateCacheIfNeeded(serverRequest);
-        Statistic stat = serverRequest.getStatisticSetting();
+        StatType statType = StatType.fromRequest(serverRequest);
 
-        CompletableFuture<TopStatResult> future = statCache.get(stat);
+        CompletableFuture<TopStatResult> future = statCache.get(statType);
         if (Bukkit.isPrimaryThread()) {
             if (!future.isDone()) {
                 return "Processing...";
@@ -123,14 +133,14 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
         TopStatResult result = tryToGetCompletableFutureResult(future);
         if (result == null) {
-            statCache.remove(stat);
+            statCache.remove(statType);
             return null;
         }
         else if (processedArgs.isRawNumberRequest) {
             return getRawServerStatResult(result.getNumericalValue()) + "";
         }
         else {
-            return getFormattedServerStatResult(result.getNumericalValue(), stat);
+            return getFormattedServerStatResult(result.getNumericalValue(), statType.statistic());
         }
     }
 
@@ -140,9 +150,9 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             return null;
         }
         updateCacheIfNeeded(topRequest);
-        Statistic stat = topRequest.getStatisticSetting();
+        StatType statType = StatType.fromRequest(topRequest);
 
-        CompletableFuture<TopStatResult> future = statCache.get(stat);
+        CompletableFuture<TopStatResult> future = statCache.get(statType);
         if (Bukkit.isPrimaryThread()) {
             if (!future.isDone()) {
                 return "Processing...";
@@ -150,7 +160,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
         TopStatResult result = tryToGetCompletableFutureResult(future);
         if (result == null) {
-            statCache.remove(stat);
+            statCache.remove(statType);
             return null;
         }
         else if (processedArgs.isRawNumberRequest) {
@@ -163,8 +173,8 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private void updateCacheIfNeeded(StatRequest<?> statRequest) {
-        Statistic stat = statRequest.getStatisticSetting();
-        if (!statCache.hasRecordOf(stat)) {
+        StatType statType = StatType.fromRequest(statRequest);
+        if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
     }
@@ -229,9 +239,11 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private void saveToCache(StatRequest<?> statRequest) {
         StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<TopStatResult> future =
-                CompletableFuture.supplyAsync(() -> (TopStatResult) newRequest.execute());
+                CompletableFuture.supplyAsync(() ->
+                        (TopStatResult) newRequest.execute());
 
-        statCache.store(newRequest.getStatisticSetting(), future);
+        StatType statType = StatType.fromRequest(newRequest);
+        statCache.add(statType, future);
     }
 
     private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {

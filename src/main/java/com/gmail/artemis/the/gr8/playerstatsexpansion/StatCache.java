@@ -1,8 +1,6 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
-import org.bukkit.Statistic;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class StatCache {
 
     volatile static StatCache instance;
-    private final ConcurrentHashMap<Statistic, CompletableFuture<TopStatResult>> statCache;
+    private final ConcurrentHashMap<StatType, CompletableFuture<TopStatResult>> statCache;
 
     private StatCache() {
         statCache = new ConcurrentHashMap<>();
@@ -29,19 +27,20 @@ public class StatCache {
         }
     }
 
-    public boolean hasRecordOf(Statistic statistic) {
-        return statCache.containsKey(statistic);
+    public boolean hasRecordOf(StatType statType) {
+        return statCache.containsKey(statType);
     }
 
-    public void store(Statistic statistic, CompletableFuture<TopStatResult> allTopStats) {
-        statCache.put(statistic, allTopStats);
+    /** Add a statistic to the cache and register a listener for it */
+    public void add(StatType statType, CompletableFuture<TopStatResult> allTopStats) {
+        statCache.put(statType, allTopStats);
     }
 
-    public CompletableFuture<TopStatResult> get(Statistic statistic) {
-        return statCache.get(statistic);
+    public CompletableFuture<TopStatResult> get(StatType statType) {
+        return statCache.get(statType);
     }
 
-    public void remove(Statistic statistic) {
-        statCache.remove(statistic);
+    public void remove(StatType statType) {
+        statCache.remove(statType);
     }
 }
