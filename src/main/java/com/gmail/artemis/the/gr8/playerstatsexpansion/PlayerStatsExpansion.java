@@ -3,6 +3,7 @@ package com.gmail.artemis.the.gr8.playerstatsexpansion;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.gmail.artemis.the.gr8.playerstats.api.*;
+import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
@@ -107,6 +108,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs processedArgs) {
         StatRequest<Integer> playerRequest = getPlayerRequest(processedArgs);
         if (playerRequest == null) {
+            logWarning("playerRequest is null!");
             return null;
         }
 
@@ -140,7 +142,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             return getRawServerStatResult(result.getNumericalValue()) + "";
         }
         else {
-            return getFormattedServerStatResult(result.getNumericalValue(), statType.statistic());
+            return getFormattedServerStatResult(result.getNumericalValue(), statType);
         }
     }
 
@@ -291,10 +293,20 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return numbers.get(playerNames[lineNumber-1]);
     }
 
-    private String getFormattedServerStatResult(LinkedHashMap<String, Integer> allStats, Statistic statistic) {
+    private String getFormattedServerStatResult(LinkedHashMap<String, Integer> allStats, StatType statType) {
+        Statistic statistic = statType.statistic();
         long result = getRawServerStatResult(allStats);
-        TextComponent prettyResult = statFormatter.getFormattedServerStat(result, statistic);
-        return componentToString(prettyResult);
+        String prettySubStat = getPrettySubStatName(statType);
+
+        if (prettySubStat != null) {
+            return componentToString(statFormatter.getFormattedServerStat(result, statistic, prettySubStat));
+        }
+        Unit.Type unitType = Unit.getTypeFromStatistic(statistic);
+        if (unitType != Unit.Type.UNTYPED) {
+            Unit unit = Unit.getMostSuitableUnit(unitType, result);
+            return componentToString(statFormatter.getFormattedServerStat(result, statistic, unit));
+        }
+        return componentToString(statFormatter.getFormattedServerStat(result, statistic));
     }
 
     private long getRawServerStatResult(LinkedHashMap<String, Integer> allStats) {
@@ -303,6 +315,28 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
                 .parallelStream()
                 .toList();
         return numbers.parallelStream().mapToLong(Integer::longValue).sum();
+    }
+
+    private String getPrettySubStatName(StatType statType) {
+        return switch (statType.statistic().getType()) {
+            case BLOCK, ITEM -> {
+                Material material = statType.material();
+                if (material != null) {
+                    yield statFormatter.BukkitEnumToString(material.toString());
+                } else {
+                    yield null;
+                }
+            }
+            case ENTITY -> {
+                EntityType entityType = statType.entityType();
+                if (entityType != null) {
+                    yield statFormatter.BukkitEnumToString(entityType.toString());
+                } else {
+                    yield null;
+                }
+            }
+            default -> null;
+        };
     }
 
     private @Nullable TopStatResult tryToGetCompletableFutureResult(CompletableFuture<TopStatResult> future) {

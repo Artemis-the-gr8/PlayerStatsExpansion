@@ -40,25 +40,25 @@ public class ProcessedArgs {
 
     public @Nullable Statistic getStatistic() {
         try {
-            return Statistic.valueOf(statIdentifiers[0].toUpperCase());
+            Statistic stat = Statistic.valueOf(statIdentifiers[0].toUpperCase());
+            PlayerStatsExpansion.logWarning("getStatistic: " + stat);
+            return stat;
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
     public @Nullable Material getMaterialSubStat() {
-        if (statIdentifiers.length <= 1) {
-            return null;
-        }
-        return Material.matchMaterial(statIdentifiers[1]);
+        Material material = Material.matchMaterial(statIdentifiers[1]);
+        PlayerStatsExpansion.logWarning("getMaterialSubStat: " + material);
+        return material;
     }
 
     public @Nullable EntityType getEntitySubStat() {
-        if (statIdentifiers.length <= 1) {
-            return null;
-        }
         try {
-            return EntityType.valueOf(statIdentifiers[1]);
+            EntityType entityType = EntityType.valueOf(statIdentifiers[1].toUpperCase());
+            PlayerStatsExpansion.logWarning("getEntitySubStat: " + entityType);
+            return entityType;
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -88,17 +88,22 @@ public class ProcessedArgs {
                 if (arg.startsWith("top:")) {
                     target = Target.TOP;
                     topListSize = findTopListSize(arg);
+                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
                 else if (arg.contains("player:")) {
                     target = Target.PLAYER;
                     playerName = findPlayerName(arg);
+                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
                 else {
                     target = Target.SERVER;
+                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
-                return Arrays.stream(argsToProcess)
+                String[] result = Arrays.stream(argsToProcess)
                         .filter(string -> !(string.equalsIgnoreCase(arg)))
                         .toArray(String[]::new);
+                PlayerStatsExpansion.logWarning(Arrays.toString(result));
+                return result;
             }
         }
         return argsToProcess;
