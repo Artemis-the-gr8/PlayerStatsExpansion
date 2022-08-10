@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Args {
+public class ProcessedArgs {
 
     private final static Pattern targetPattern;
     private final static Pattern targetTopArgPattern;
@@ -32,7 +32,7 @@ public class Args {
     //(raw,)   top:n                 stat_name(:sub_stat_name)
     //(raw,)   player:player_name    stat_name(:sub_stat_name)
     //(raw,)   server                stat_name(:sub_stat_name)
-    public Args(String args) {
+    public ProcessedArgs(String args) {
         String[] argsToProcess = args.split(",");
         String[] leftoverArgs = extractAllKeywords(argsToProcess);
         statIdentifiers = leftoverArgs[0].split(":");
