@@ -97,8 +97,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         distanceUpdateSetting = 10;
         timeUpdateSetting = 10;
 
-//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 1) * 60;
-//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 1) * 60;
+//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
+//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
     }
 
     public static int getDistanceUpdateSetting() {
