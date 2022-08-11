@@ -1,9 +1,9 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class StatCache {
 
@@ -42,5 +42,21 @@ public class StatCache {
 
     public void remove(StatType statType) {
         statCache.remove(statType);
+    }
+
+    public static @Nullable TopStatResult tryToGetCompletableFutureResult(CompletableFuture<TopStatResult> future) {
+        TopStatResult result = null;
+        try {
+            result = future.get(60, TimeUnit.SECONDS);
+        } catch (CancellationException canceled) {
+            PlayerStatsExpansion.logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
+        } catch (InterruptedException interrupted) {
+            PlayerStatsExpansion.logWarning("This thread was interrupted while waiting for StatResults");
+        } catch (ExecutionException exception) {
+            PlayerStatsExpansion.logWarning("An ExecutionException occurred while trying to get all statistic values");
+        } catch (TimeoutException timeoutException) {
+            PlayerStatsExpansion.logWarning("a PlaceHolder request has timed out");
+        }
+        return result;
     }
 }

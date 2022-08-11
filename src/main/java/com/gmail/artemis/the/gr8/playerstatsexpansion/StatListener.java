@@ -1,14 +1,17 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
-import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.Component;
-import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
-import me.clip.placeholderapi.PlaceholderAPIPlugin;
-import org.bukkit.Bukkit;
+import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
 import org.bukkit.Statistic;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
+
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public final class StatListener implements Listener {
 
@@ -16,35 +19,50 @@ public final class StatListener implements Listener {
 
     public StatListener() {
         statCache = StatCache.getInstance();
-        Bukkit.getPluginManager().registerEvents(this, PlaceholderAPIPlugin.getInstance());
     }
 
     @EventHandler
     public void onStatisticIncrementEvent(PlayerStatisticIncrementEvent event) {
+        StatType statType = getStatType(event);
+        if (statCache.hasRecordOf(statType)) {
+            CompletableFuture<TopStatResult> future = statCache.get(statType);
+            if (future.isDone()) {
+                TopStatResult topStatResult = StatCache.tryToGetCompletableFutureResult(future);
+                int newValue = event.getNewValue();
+                assert topStatResult != null;
+                LinkedHashMap<String, Integer> updatedValues = getUpdatedHashMap(
+                        topStatResult.getNumericalValue(), event.getPlayer().getName(), newValue);
+
+                //add formatted message to create new TopStatResult?
+            }
+        }
+    }
+
+    private StatType getStatType(PlayerStatisticIncrementEvent event) {
         Statistic stat = event.getStatistic();
-        Player player = event.getPlayer();
-        String message = TestListener.getIDfromStat(stat) + ". " + stat;
-        TestListener.adventure().console().sendMessage(defaultMessage(message));
+        return switch (stat.getType()) {
+            case UNTYPED -> new StatType(stat, null, null);
+            case BLOCK, ITEM -> new StatType(stat, event.getMaterial(), null);
+            case ENTITY -> new StatType(stat, null, event.getEntityType());
+        };
+    }
 
-        if (TestListener.getIDfromStat(stat) == TestListener.getCurrentTaskID()) {
-            TestListener.adventure().player(player).sendMessage(completedMessage());
-            TestListener.sendNextTask(player);
+    private LinkedHashMap<String, Integer> getUpdatedHashMap(LinkedHashMap<String, Integer> oldValues, String playerName, int newValue) {
+        oldValues.put(playerName, newValue);
+        List<String> playerNames = oldValues.keySet().stream().toList();
+        int index = playerNames.indexOf(playerName);
+        if (index == -1 || index == 1) {
+            return oldValues;
         }
-        else if (stat == Statistic.ENDERCHEST_OPENED) {
-            TestListener.adventure().player(player).sendMessage(skipMessage());
-            TestListener.sendNextTask(player);
+
+        int higherValue = oldValues.get(playerNames.get(index-1));
+        int lowerValue = oldValues.get(playerNames.get(index+1));
+        if (newValue <= higherValue && newValue >= lowerValue) {
+            return oldValues;
         }
-    }
 
-    private Component completedMessage() {
-        return MiniMessage.miniMessage().deserialize("<gradient:#fae105:#0cf0b7>You did it!</gradient>");
-    }
-
-    private Component skipMessage() {
-        return MiniMessage.miniMessage().deserialize("<gradient:#e60ede:#f79900:#f5dd0a>Skipping ahead...</gradient>");
-    }
-
-    private Component defaultMessage(String message) {
-        return MiniMessage.miniMessage().deserialize("<gradient:#f07a0c:red>" + message + "</gradient>");
+        return oldValues.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
     }
 }

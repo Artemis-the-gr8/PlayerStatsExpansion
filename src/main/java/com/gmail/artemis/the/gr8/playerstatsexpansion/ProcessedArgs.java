@@ -40,25 +40,19 @@ public class ProcessedArgs {
 
     public @Nullable Statistic getStatistic() {
         try {
-            Statistic stat = Statistic.valueOf(statIdentifiers[0].toUpperCase());
-            PlayerStatsExpansion.logWarning("getStatistic: " + stat);
-            return stat;
+            return Statistic.valueOf(statIdentifiers[0].toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
     public @Nullable Material getMaterialSubStat() {
-        Material material = Material.matchMaterial(statIdentifiers[1]);
-        PlayerStatsExpansion.logWarning("getMaterialSubStat: " + material);
-        return material;
+        return Material.matchMaterial(statIdentifiers[1]);
     }
 
     public @Nullable EntityType getEntitySubStat() {
         try {
-            EntityType entityType = EntityType.valueOf(statIdentifiers[1].toUpperCase());
-            PlayerStatsExpansion.logWarning("getEntitySubStat: " + entityType);
-            return entityType;
+            return EntityType.valueOf(statIdentifiers[1].toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -88,16 +82,13 @@ public class ProcessedArgs {
                 if (arg.startsWith("top:")) {
                     target = Target.TOP;
                     topListSize = findTopListSize(arg);
-                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
                 else if (arg.contains("player:")) {
                     target = Target.PLAYER;
                     playerName = findPlayerName(arg);
-                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
                 else {
                     target = Target.SERVER;
-                    PlayerStatsExpansion.logWarning("extracted target: " + arg);
                 }
                 String[] result = Arrays.stream(argsToProcess)
                         .filter(string -> !(string.equalsIgnoreCase(arg)))
@@ -121,7 +112,7 @@ public class ProcessedArgs {
                 PlayerStatsExpansion.logWarning("Unexpected Exception! " + ex);
             }
         }
-        PlayerStatsExpansion.logWarning("No valid rank-number found for top-selection!");
+        PlayerStatsExpansion.logWarning("No valid line-number found for top-selection!");
         return 1;
     }
 

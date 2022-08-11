@@ -7,6 +7,7 @@ import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
+import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -27,7 +28,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private static ApiFormatter statFormatter;
 
     private static StatCache statCache;
-    private TestListener testListener;
+    private StatListener statListener;
 
     @Override
     public String getIdentifier() {
@@ -67,8 +68,10 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private void registerListener() {
-        if (testListener == null) {
-            testListener = new TestListener();
+        if (statListener == null) {
+            statListener = new StatListener();
+            Bukkit.getPluginManager().registerEvents(
+                    statListener, PlaceholderAPIPlugin.getInstance());
         }
     }
 
@@ -133,7 +136,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
                 return "Processing...";
             }
         }
-        TopStatResult result = tryToGetCompletableFutureResult(future);
+        TopStatResult result = StatCache.tryToGetCompletableFutureResult(future);
         if (result == null) {
             statCache.remove(statType);
             return null;
@@ -160,7 +163,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
                 return "Processing...";
             }
         }
-        TopStatResult result = tryToGetCompletableFutureResult(future);
+        TopStatResult result = StatCache.tryToGetCompletableFutureResult(future);
         if (result == null) {
             statCache.remove(statType);
             return null;
@@ -171,13 +174,6 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         }
         else {
             return getSingleFormattedTopStatLine(result, processedArgs);
-        }
-    }
-
-    private void updateCacheIfNeeded(StatRequest<?> statRequest) {
-        StatType statType = StatType.fromRequest(statRequest);
-        if (!statCache.hasRecordOf(statType)) {
-            saveToCache(statRequest);
         }
     }
 
@@ -235,6 +231,13 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             default -> {
                 return null;
             }
+        }
+    }
+
+    private void updateCacheIfNeeded(StatRequest<?> statRequest) {
+        StatType statType = StatType.fromRequest(statRequest);
+        if (!statCache.hasRecordOf(statType)) {
+            saveToCache(statRequest);
         }
     }
 
@@ -317,42 +320,12 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return numbers.parallelStream().mapToLong(Integer::longValue).sum();
     }
 
-    private String getPrettySubStatName(StatType statType) {
-        return switch (statType.statistic().getType()) {
-            case BLOCK, ITEM -> {
-                Material material = statType.material();
-                if (material != null) {
-                    yield statFormatter.BukkitEnumToString(material.toString());
-                } else {
-                    yield null;
-                }
-            }
-            case ENTITY -> {
-                EntityType entityType = statType.entityType();
-                if (entityType != null) {
-                    yield statFormatter.BukkitEnumToString(entityType.toString());
-                } else {
-                    yield null;
-                }
-            }
-            default -> null;
-        };
-    }
-
-    private @Nullable TopStatResult tryToGetCompletableFutureResult(CompletableFuture<TopStatResult> future) {
-        TopStatResult result = null;
-        try {
-            result = future.get(60, TimeUnit.SECONDS);
-        } catch (CancellationException canceled) {
-            logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
-        } catch (InterruptedException interrupted) {
-            logWarning("This thread was interrupted while waiting for StatResults");
-        } catch (ExecutionException exception) {
-            logWarning("An ExecutionException occurred while trying to get all statistic values");
-        } catch (TimeoutException timeoutException) {
-            logWarning("a PlaceHolder request has timed out");
+    private @Nullable String getPrettySubStatName(StatType statType) {
+        String subStatName = statType.getSubStatName();
+        if (subStatName == null) {
+            return null;
         }
-        return result;
+        return statFormatter.BukkitEnumToString(subStatName);
     }
 
     private @Nullable String componentToString(TextComponent component) {
