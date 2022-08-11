@@ -3,7 +3,7 @@ package com.gmail.artemis.the.gr8.playerstatsexpansion;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
-public class MyLogger {
+public final class MyLogger {
 
     private final static ArrayList<String> loggedMessages = new ArrayList<>();
 
@@ -13,5 +13,9 @@ public class MyLogger {
             Logger myLogger = Logger.getLogger("PlayerStatsExpansion");
             myLogger.warning(msg);
         }
+    }
+
+    public static void clear() {
+        loggedMessages.clear();
     }
 }

@@ -3,7 +3,7 @@ package com.gmail.artemis.the.gr8.playerstatsexpansion;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class LinkedStatResult {
+public final class LinkedStatResult {
 
     private LinkedHashMap<String, Integer> statResult;
 

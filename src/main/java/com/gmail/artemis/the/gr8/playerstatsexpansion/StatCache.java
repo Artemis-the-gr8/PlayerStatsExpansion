@@ -1,16 +1,22 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
+import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.*;
 
-public class StatCache {
+public final class StatCache {
 
-    volatile static StatCache instance;
+    private volatile static StatCache instance;
+
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> statCache;
+    private final ConcurrentHashMap<StatType, Instant> updateRecords;
 
     private StatCache() {
         statCache = new ConcurrentHashMap<>();
+        updateRecords = new ConcurrentHashMap<>();
     }
 
     public static StatCache getInstance() {
@@ -26,21 +32,36 @@ public class StatCache {
         }
     }
 
+    public void clear() {
+        statCache.clear();
+    }
+
     public boolean hasRecordOf(StatType statType) {
         String record = statCache.containsKey(statType) ? "[yes]" : "[no]";
         MyLogger.logWarning("(cache) record of " + statType.statistic() + ": " + record);
         return statCache.containsKey(statType);
     }
 
+    public boolean isTimeToUpdate(StatType statType, int secondsToPass) {
+        long comparison = updateRecords.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
+        MyLogger.logWarning("Amount of seconds between update and now: " + comparison);
+        return comparison > secondsToPass;
+    }
+
     /** Updates the cache for the given StatType with the provided value, or adds a new entry
      if there are no records of this StatType yet.*/
     public void update(StatType statType, CompletableFuture<LinkedStatResult> allTopStats) {
         statCache.put(statType, allTopStats);
+
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        if (unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME) {
+            updateRecords.put(statType, Instant.now());
+        }
     }
 
     /** Update the CompletableFuture for this StatType in the cache with the provided values,
      either when this future has completed or immediately if it is already done.*/
-    public void scheduleUpdate(StatType statType, String playerName, int newStatValue) {
+    public void offerNewValue(StatType statType, String playerName, int newStatValue) {
         if (statCache.containsKey(statType)) {
             MyLogger.logWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
             CompletableFuture<LinkedStatResult> future = statCache.get(statType);

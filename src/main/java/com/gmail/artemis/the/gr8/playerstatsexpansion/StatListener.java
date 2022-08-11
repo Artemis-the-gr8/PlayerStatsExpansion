@@ -35,7 +35,7 @@ public final class StatListener implements Listener {
                 statCache.update(statType, future);
             }
             else {
-                statCache.scheduleUpdate(statType, playerName, newValue);
+                statCache.offerNewValue(statType, playerName, newValue);
             }
         }
     }

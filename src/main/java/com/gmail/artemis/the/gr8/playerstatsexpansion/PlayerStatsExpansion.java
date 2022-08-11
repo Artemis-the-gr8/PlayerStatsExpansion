@@ -7,6 +7,8 @@ import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
+import me.clip.placeholderapi.expansion.Cacheable;
+import me.clip.placeholderapi.expansion.Configurable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -16,35 +18,53 @@ import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.*;
 
-public class PlayerStatsExpansion extends PlaceholderExpansion {
+public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
     private static StatManager statManager;
     private static ApiFormatter statFormatter;
 
     private static StatCache statCache;
-    private StatListener statListener;
+    private static StatListener statListener;
+    private static int distanceUpdateSetting;
+    private static int timeUpdateSetting;
 
     @Override
-    public String getIdentifier() {
+    public @NotNull String getIdentifier() {
         return "playerstats";
     }
 
     @Override
-    public String getAuthor() {
+    public @NotNull String getAuthor() {
         return "Artemis";
     }
 
     @Override
-    public String getVersion() {
+    public @NotNull String getVersion() {
         return "1.0.0";
     }
 
     @Override
-    public String getRequiredPlugin() {
+    public @NotNull String getRequiredPlugin() {
         return "PlayerStats";
+    }
+
+    @Override
+    public Map<String, Object> getDefaults() {
+        Map<String, Object> configValues = new HashMap<>();
+        configValues.put("update_interval_in_minutes_for_distance_types", 1);
+        configValues.put("update_interval_in_minutes_for_time_types", 1);
+        return configValues;
+    }
+
+    @Override
+    public void clear() {
+        MyLogger.clear();
+        statCache.clear();
     }
 
     @Override
@@ -60,6 +80,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
 
+        loadConfigSettings();
         registerListener();
         return true;
     }
@@ -70,6 +91,22 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             Bukkit.getPluginManager().registerEvents(
                     statListener, PlaceholderAPIPlugin.getInstance());
         }
+    }
+
+    private void loadConfigSettings() {
+        distanceUpdateSetting = 10;
+        timeUpdateSetting = 10;
+
+//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 1) * 60;
+//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 1) * 60;
+    }
+
+    public static int getDistanceUpdateSetting() {
+        return distanceUpdateSetting;
+    }
+
+    public static int getTimeUpdateSetting() {
+        return timeUpdateSetting;
     }
 
     /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
@@ -90,7 +127,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return getStatResult(args);
     }
 
-    private String getStatResult(String args) {
+    private @Nullable String getStatResult(String args) {
         ProcessedArgs processedArgs = new ProcessedArgs(args);
         if (processedArgs.target == null) {
             MyLogger.logWarning("missing top/server/player selection");
@@ -128,7 +165,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
 
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult == null) {
-            return "Processing...";
+            return processingMessage();
         }
 
         long sum = linkedResult.getSumOfAllValues();
@@ -150,7 +187,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
 
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult == null) {
-            return "Processing...";
+            return processingMessage();
         }
 
         int lineNumber = processedArgs.topListSize;
@@ -170,6 +207,9 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
+        else if (updateIntervalHasPassed(statType)){
+            saveToCache(statRequest);
+        }
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
@@ -182,6 +222,15 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
 
         StatType statType = StatType.fromRequest(newRequest);
         statCache.update(statType, future);
+    }
+
+    private boolean updateIntervalHasPassed(StatType statType) {
+        Unit.Type unitTye = Unit.getTypeFromStatistic(statType.statistic());
+        if (unitTye == Unit.Type.DISTANCE || unitTye == Unit.Type.TIME) {
+            int updateInterval = (unitTye == Unit.Type.DISTANCE) ? distanceUpdateSetting : timeUpdateSetting;
+            return statCache.isTimeToUpdate(statType, updateInterval);
+        }
+        return false;
     }
 
     private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
@@ -308,5 +357,10 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             return null;
         }
         return statFormatter.TextComponentToString(component);
+    }
+
+    private String processingMessage() {
+        TextComponent msg = (TextComponent) MiniMessage.miniMessage().deserialize("<#ADE7FF>Processing...");
+        return componentToString(msg);
     }
 }
