@@ -1,17 +1,11 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion;
 
-import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
 import org.bukkit.Statistic;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 public final class StatListener implements Listener {
 
@@ -24,16 +18,24 @@ public final class StatListener implements Listener {
     @EventHandler
     public void onStatisticIncrementEvent(PlayerStatisticIncrementEvent event) {
         StatType statType = getStatType(event);
-        if (statCache.hasRecordOf(statType)) {
-            CompletableFuture<TopStatResult> future = statCache.get(statType);
-            if (future.isDone()) {
-                TopStatResult topStatResult = StatCache.tryToGetCompletableFutureResult(future);
-                int newValue = event.getNewValue();
-                assert topStatResult != null;
-                LinkedHashMap<String, Integer> updatedValues = getUpdatedHashMap(
-                        topStatResult.getNumericalValue(), event.getPlayer().getName(), newValue);
+        String playerName = event.getPlayer().getName();
+        int newValue = event.getNewValue();
 
-                //add formatted message to create new TopStatResult?
+        if (statCache.hasRecordOf(statType)) {
+            LinkedStatResult linkedStatResult = statCache.tryToGetCompletableFutureResult(statType);
+
+            if (linkedStatResult != null) {
+                final CompletableFuture<LinkedStatResult> future =
+                        CompletableFuture.supplyAsync(() ->
+                        {
+                            linkedStatResult.insertValueIntoExistingOrder(playerName, newValue);
+                            return linkedStatResult;
+                        });
+
+                statCache.update(statType, future);
+            }
+            else {
+                statCache.scheduleUpdate(statType, playerName, newValue);
             }
         }
     }
@@ -45,24 +47,5 @@ public final class StatListener implements Listener {
             case BLOCK, ITEM -> new StatType(stat, event.getMaterial(), null);
             case ENTITY -> new StatType(stat, null, event.getEntityType());
         };
-    }
-
-    private LinkedHashMap<String, Integer> getUpdatedHashMap(LinkedHashMap<String, Integer> oldValues, String playerName, int newValue) {
-        oldValues.put(playerName, newValue);
-        List<String> playerNames = oldValues.keySet().stream().toList();
-        int index = playerNames.indexOf(playerName);
-        if (index == -1 || index == 1) {
-            return oldValues;
-        }
-
-        int higherValue = oldValues.get(playerNames.get(index-1));
-        int lowerValue = oldValues.get(playerNames.get(index+1));
-        if (newValue <= higherValue && newValue >= lowerValue) {
-            return oldValues;
-        }
-
-        return oldValues.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
     }
 }

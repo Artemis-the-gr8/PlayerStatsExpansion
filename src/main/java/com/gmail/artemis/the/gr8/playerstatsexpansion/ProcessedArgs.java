@@ -90,11 +90,9 @@ public class ProcessedArgs {
                 else {
                     target = Target.SERVER;
                 }
-                String[] result = Arrays.stream(argsToProcess)
+                return Arrays.stream(argsToProcess)
                         .filter(string -> !(string.equalsIgnoreCase(arg)))
                         .toArray(String[]::new);
-                PlayerStatsExpansion.logWarning(Arrays.toString(result));
-                return result;
             }
         }
         return argsToProcess;
