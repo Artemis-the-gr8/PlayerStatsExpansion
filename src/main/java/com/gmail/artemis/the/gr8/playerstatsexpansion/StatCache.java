@@ -28,7 +28,7 @@ public class StatCache {
 
     public boolean hasRecordOf(StatType statType) {
         String record = statCache.containsKey(statType) ? "[yes]" : "[no]";
-        PlayerStatsExpansion.logWarning("(cache) record of " + statType.statistic() + ": " + record);
+        MyLogger.logWarning("(cache) record of " + statType.statistic() + ": " + record);
         return statCache.containsKey(statType);
     }
 
@@ -42,14 +42,13 @@ public class StatCache {
      either when this future has completed or immediately if it is already done.*/
     public void scheduleUpdate(StatType statType, String playerName, int newStatValue) {
         if (statCache.containsKey(statType)) {
-            PlayerStatsExpansion.logWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
+            MyLogger.logWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
             CompletableFuture<LinkedStatResult> future = statCache.get(statType);
             future.thenApplyAsync(map -> {
-                PlayerStatsExpansion.logWarning("Updating [" + playerName + "] with new value [" + newStatValue + "]");
+                MyLogger.logWarning("Updating [" + playerName + "] with new value [" + newStatValue + "]");
                 map.insertValueIntoExistingOrder(playerName, newStatValue);
                 return map;
             });
-            //TODO check if this needs to be put in the cache again
         }
     }
 
@@ -60,23 +59,23 @@ public class StatCache {
         CompletableFuture<LinkedStatResult> cachedResult = statCache.get(statType);
         LinkedStatResult result = null;
         if (!cachedResult.isDone()) {
-            PlayerStatsExpansion.logWarning("(cache) waiting for task...");
+            MyLogger.logWarning("(cache) waiting for task...");
             return null;
         }
         try {
             result = cachedResult.get(10, TimeUnit.SECONDS);
         } catch (CancellationException canceled) {
-            PlayerStatsExpansion.logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
+            MyLogger.logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
             statCache.remove(statType);
         } catch (InterruptedException interrupted) {
-            PlayerStatsExpansion.logWarning("This thread was interrupted while waiting for StatResults");
+            MyLogger.logWarning("This thread was interrupted while waiting for StatResults");
             statCache.remove(statType);
         } catch (ExecutionException exception) {
             exception.printStackTrace();
-            PlayerStatsExpansion.logWarning("An ExecutionException occurred while trying to get all statistic values");
+            MyLogger.logWarning("An ExecutionException occurred while trying to get all statistic values");
             statCache.remove(statType);
         } catch (TimeoutException timeoutException) {
-            PlayerStatsExpansion.logWarning("a PlaceHolder request has timed out");
+            MyLogger.logWarning("a PlaceHolder request has timed out");
             statCache.remove(statType);
         }
         return result;

@@ -105,12 +105,12 @@ public class ProcessedArgs {
                 String match = matcher.group();
                 return Integer.parseInt(match);
             } catch (NumberFormatException e) {
-                PlayerStatsExpansion.logWarning("NumberFormatException!");
+                MyLogger.logWarning("NumberFormatException!");
             } catch (Exception ex) {
-                PlayerStatsExpansion.logWarning("Unexpected Exception! " + ex);
+                MyLogger.logWarning("Unexpected Exception! " + ex);
             }
         }
-        PlayerStatsExpansion.logWarning("No valid line-number found for top-selection!");
+        MyLogger.logWarning("No valid line-number found for top-selection!");
         return 1;
     }
 
@@ -119,7 +119,7 @@ public class ProcessedArgs {
         if (matcher.find()) {
             return matcher.group();
         }
-        PlayerStatsExpansion.logWarning("No valid player-name found for player-selection!");
+        MyLogger.logWarning("No valid player-name found for player-selection!");
         return null;
     }
 }

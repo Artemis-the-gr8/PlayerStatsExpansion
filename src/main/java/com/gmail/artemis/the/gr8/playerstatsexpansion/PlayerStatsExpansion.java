@@ -18,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.concurrent.*;
-import java.util.logging.Logger;
 
 public class PlayerStatsExpansion extends PlaceholderExpansion {
 
@@ -54,7 +53,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         try {
             playerStats = PlayerStats.getAPI();
         } catch (IllegalStateException e) {
-            logWarning("Unable to connect to PlayerStats' API!");
+            MyLogger.logWarning("Unable to connect to PlayerStats' API!");
             return false;
         }
         statManager = playerStats.getStatManager();
@@ -94,7 +93,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private String getStatResult(String args) {
         ProcessedArgs processedArgs = new ProcessedArgs(args);
         if (processedArgs.target == null) {
-            logWarning("missing top/server/player selection");
+            MyLogger.logWarning("missing top/server/player selection");
             return null;
         }
 
@@ -108,7 +107,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs processedArgs) {
         StatRequest<Integer> playerRequest = getPlayerRequest(processedArgs);
         if (playerRequest == null) {
-            logWarning("playerRequest is null!");
+            MyLogger.logWarning("playerRequest is null!");
             return null;
         }
 
@@ -174,7 +173,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
-        logWarning("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
+        MyLogger.logWarning("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
         StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
                 CompletableFuture.supplyAsync(() ->
@@ -186,10 +185,10 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
-        logWarning("(main) getting playerRequest for [" + processedArgs.getStatistic() + "] [" + processedArgs.playerName + "]");
+        MyLogger.logWarning("(main) getting playerRequest for [" + processedArgs.getStatistic() + "] [" + processedArgs.playerName + "]");
         String playerName = processedArgs.playerName;
         if (playerName == null) {
-            logWarning("missing or invalid player-name");
+            MyLogger.logWarning("missing or invalid player-name");
             return null;
         }
 
@@ -198,13 +197,13 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private @Nullable StatRequest<Long> getServerRequest(ProcessedArgs processedArgs) {
-        logWarning("(main) getting serverRequest for [" + processedArgs.getStatistic() + "]");
+        MyLogger.logWarning("(main) getting serverRequest for [" + processedArgs.getStatistic() + "]");
         RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
         return createRequest(requestGenerator, processedArgs);
     }
 
     private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArgs processedArgs) {
-        logWarning("(main) getting topRequest for [" + processedArgs.getStatistic() + "] [top: " + processedArgs.topListSize + "]");
+        MyLogger.logWarning("(main) getting topRequest for [" + processedArgs.getStatistic() + "] [top: " + processedArgs.topListSize + "]");
         int topListSize = processedArgs.topListSize;
 
         RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
@@ -214,7 +213,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArgs processedArgs) {
         Statistic stat = processedArgs.getStatistic();
         if (stat == null) {
-            logWarning("missing or invalid Statistic");
+            MyLogger.logWarning("missing or invalid Statistic");
             return null;
         }
 
@@ -225,7 +224,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             case BLOCK, ITEM -> {
                 Material material = processedArgs.getMaterialSubStat();
                 if (material == null) {
-                    logWarning("missing or invalid Material");
+                    MyLogger.logWarning("missing or invalid Material");
                     return null;
                 }
                 return requestGenerator.blockOrItemType(stat, material);
@@ -234,7 +233,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             case ENTITY -> {
                 EntityType entityType = processedArgs.getEntitySubStat();
                 if (entityType == null) {
-                    logWarning("missing or invalid EntityType");
+                    MyLogger.logWarning("missing or invalid EntityType");
                     return null;
                 }
                 return requestGenerator.entityType(stat, entityType);
@@ -246,7 +245,7 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
-        logWarning("(main) transforming request into total request for [" + statRequest.getTargetSetting() + "] [" + statRequest.getStatisticSetting() + "]");
+        MyLogger.logWarning("(main) transforming request into total request for [" + statRequest.getTargetSetting() + "] [" + statRequest.getStatisticSetting() + "]");
         RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
         Statistic stat = statRequest.getStatisticSetting();
         return switch (stat.getType()) {
@@ -309,10 +308,5 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
             return null;
         }
         return statFormatter.TextComponentToString(component);
-    }
-
-    public static void logWarning(String msg) {
-        Logger myLogger = Logger.getLogger("PlayerStatsExpansion");
-        myLogger.warning(msg);
     }
 }
