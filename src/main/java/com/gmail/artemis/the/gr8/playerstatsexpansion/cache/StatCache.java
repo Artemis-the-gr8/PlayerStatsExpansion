@@ -4,7 +4,7 @@ import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.LinkedStatResult;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.StatType;
-import org.bukkit.entity.Player;
+import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
@@ -18,7 +18,7 @@ public final class StatCache {
 
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> statCache;
     private final ConcurrentHashMap<StatType, Instant> lastUpdated;
-    private final ConcurrentLinkedQueue<Player> onlinePlayers;
+    private final ConcurrentLinkedQueue<OfflinePlayer> onlinePlayers;
 
     private StatCache() {
         statCache = new ConcurrentHashMap<>();
@@ -52,11 +52,7 @@ public final class StatCache {
 
     public boolean isTimeToUpdate(StatType statType, int secondsToPass) {
         long secondsBetween = lastUpdated.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
-        boolean update = secondsBetween > secondsToPass;
-        if (update) {
-            MyLogger.logWarning("Time to update " + statType.statistic());
-        }
-        return update;
+        return secondsBetween > secondsToPass;
     }
 
     /** Adds the given StatType to the cache.*/
@@ -78,11 +74,11 @@ public final class StatCache {
         }));
     }
 
-    public void addOnlinePlayer(Player player) {
+    public void addOnlinePlayer(OfflinePlayer player) {
         onlinePlayers.add(player);
     }
 
-    public void removeOnlinePlayer(Player player) {
+    public void removeOnlinePlayer(OfflinePlayer player) {
         onlinePlayers.remove(player);
         statCache.entrySet().stream().parallel().forEach(entry -> {
             if (needsManualUpdating(entry.getKey())) {
@@ -95,10 +91,8 @@ public final class StatCache {
      either when this future has completed or immediately if it is already done.*/
     public void completeWithNewValue(StatType statType, String playerName, int newStatValue) {
         if (statCache.containsKey(statType)) {
-            MyLogger.logPersistentWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
             CompletableFuture<LinkedStatResult> future = statCache.get(statType);
             future.thenApplyAsync(map -> {
-                MyLogger.logPersistentWarning("Updating [" + playerName + "] with new value [" + newStatValue + "]");
                 map.insertValueIntoExistingOrder(playerName, newStatValue);
                 return map;
             });
@@ -124,7 +118,6 @@ public final class StatCache {
             MyLogger.logWarning("This thread was interrupted while waiting for StatResults");
             statCache.remove(statType);
         } catch (ExecutionException exception) {
-            exception.printStackTrace();
             MyLogger.logWarning("An ExecutionException occurred while trying to get all statistic values");
             statCache.remove(statType);
         } catch (TimeoutException timeoutException) {
@@ -149,12 +142,12 @@ public final class StatCache {
 
         @Override
         public void run() {
+            lastUpdated.put(entry.getKey(), Instant.now());
             onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
                 int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
                 entry.getValue().thenApplyAsync(map -> {
-                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with new value for [" + entry.getKey().statistic() + "]");
+                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with new value [" + newStat + "] for [" + entry.getKey().statistic() + "]");
                     map.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
-                    lastUpdated.put(entry.getKey(), Instant.now());
                     return map;
                 });
             });

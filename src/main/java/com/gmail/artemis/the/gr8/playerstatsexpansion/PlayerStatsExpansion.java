@@ -238,9 +238,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private boolean updateIntervalHasPassed(StatType statType) {
-        Unit.Type unitTye = Unit.getTypeFromStatistic(statType.statistic());
-        if (unitTye == Unit.Type.DISTANCE || unitTye == Unit.Type.TIME) {
-            int updateInterval = (unitTye == Unit.Type.DISTANCE) ? distanceUpdateSetting : timeUpdateSetting;
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        if (unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME) {
+            int updateInterval = (unitType == Unit.Type.DISTANCE) ? distanceUpdateSetting : timeUpdateSetting;
             return statCache.isTimeToUpdate(statType, updateInterval);
         }
         return false;
