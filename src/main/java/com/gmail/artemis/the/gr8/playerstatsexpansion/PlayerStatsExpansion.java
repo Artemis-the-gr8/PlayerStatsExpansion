@@ -333,23 +333,15 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private String getFormattedServerStatResult(long statNumber, StatType statType) {
         Statistic statistic = statType.statistic();
-        String prettySubStat = getPrettySubStatName(statType);
+        String subStatName = statType.getSubStatName();
         TextComponent result;
 
-        if (prettySubStat != null) {
-            result = statFormatter.getServerStat(statNumber, statType.statistic(), prettySubStat);
+        if (subStatName != null) {
+            result = statFormatter.getServerStat(statNumber, statType.statistic(), subStatName);
         } else {
             result = statFormatter.getServerStat(statNumber, statistic);
         }
         return componentToString(result);
-    }
-
-    private @Nullable String getPrettySubStatName(StatType statType) {
-        String subStatName = statType.getSubStatName();
-        if (subStatName == null) {
-            return null;
-        }
-        return statFormatter.BukkitEnumToString(subStatName);
     }
 
     private @Nullable String componentToString(TextComponent component) {

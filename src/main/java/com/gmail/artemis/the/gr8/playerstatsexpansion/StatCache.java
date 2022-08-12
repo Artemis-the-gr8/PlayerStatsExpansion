@@ -34,6 +34,7 @@ public final class StatCache {
 
     public void clear() {
         statCache.clear();
+        updateRecords.clear();
     }
 
     public boolean hasRecordOf(StatType statType) {
@@ -61,7 +62,7 @@ public final class StatCache {
 
     /** Update the CompletableFuture for this StatType in the cache with the provided values,
      either when this future has completed or immediately if it is already done.*/
-    public void offerNewValue(StatType statType, String playerName, int newStatValue) {
+    public void completeWithNewValue(StatType statType, String playerName, int newStatValue) {
         if (statCache.containsKey(statType)) {
             MyLogger.logWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
             CompletableFuture<LinkedStatResult> future = statCache.get(statType);

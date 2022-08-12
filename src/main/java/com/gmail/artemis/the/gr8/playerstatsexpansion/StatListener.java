@@ -24,7 +24,10 @@ public final class StatListener implements Listener {
         if (statCache.hasRecordOf(statType)) {
             LinkedStatResult linkedStatResult = statCache.tryToGetCompletableFutureResult(statType);
 
-            if (linkedStatResult != null) {
+            if (linkedStatResult == null) {
+                statCache.completeWithNewValue(statType, playerName, newValue);
+            }
+            else  {
                 final CompletableFuture<LinkedStatResult> future =
                         CompletableFuture.supplyAsync(() ->
                         {
@@ -33,9 +36,6 @@ public final class StatListener implements Listener {
                         });
 
                 statCache.update(statType, future);
-            }
-            else {
-                statCache.offerNewValue(statType, playerName, newValue);
             }
         }
     }
