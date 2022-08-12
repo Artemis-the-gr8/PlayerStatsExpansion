@@ -1,5 +1,7 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
 
+import com.gmail.artemis.the.gr8.playerstatsexpansion.LinkedStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.StatType;
 import org.bukkit.Statistic;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -35,7 +37,7 @@ public final class StatListener implements Listener {
                             return linkedStatResult;
                         });
 
-                statCache.update(statType, future);
+                statCache.add(statType, future);
             }
         }
     }

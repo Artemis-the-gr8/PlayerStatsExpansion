@@ -6,6 +6,9 @@ import com.gmail.artemis.the.gr8.playerstats.api.*;
 import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.expansion.Cacheable;
 import me.clip.placeholderapi.expansion.Configurable;
@@ -30,6 +33,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private static StatCache statCache;
     private static StatListener statListener;
+    private static JoinAndQuitListener joinAndQuitListener;
     private static int distanceUpdateSetting;
     private static int timeUpdateSetting;
 
@@ -81,21 +85,29 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         statCache = StatCache.getInstance();
 
         loadConfigSettings();
-        registerListener();
+        registerListeners();
         return true;
     }
 
-    private void registerListener() {
+    private void registerListeners() {
         if (statListener == null) {
             statListener = new StatListener();
             Bukkit.getPluginManager().registerEvents(
                     statListener, PlaceholderAPIPlugin.getInstance());
         }
+        if (joinAndQuitListener == null) {
+            joinAndQuitListener = new JoinAndQuitListener();
+            Bukkit.getPluginManager().registerEvents(
+                    joinAndQuitListener, PlaceholderAPIPlugin.getInstance());
+        }
     }
 
     private void loadConfigSettings() {
-        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
-        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
+        distanceUpdateSetting = 10;
+        timeUpdateSetting = 10;
+
+//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
+//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
     }
 
     /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
@@ -209,7 +221,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             saveToCache(statRequest);
         }
         else if (updateIntervalHasPassed(statType)){
-            saveToCache(statRequest);
+            statCache.update();
         }
     }
 
@@ -222,7 +234,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
                 );
 
         StatType statType = StatType.fromRequest(newRequest);
-        statCache.update(statType, future);
+        statCache.add(statType, future);
     }
 
     private boolean updateIntervalHasPassed(StatType statType) {

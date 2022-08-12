@@ -1,10 +1,15 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
 
 import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.LinkedStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.StatType;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.concurrent.*;
 
 public final class StatCache {
@@ -12,11 +17,13 @@ public final class StatCache {
     private volatile static StatCache instance;
 
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> statCache;
-    private final ConcurrentHashMap<StatType, Instant> updateRecords;
+    private final ConcurrentHashMap<StatType, Instant> lastUpdated;
+    private final ConcurrentLinkedQueue<Player> onlinePlayers;
 
     private StatCache() {
         statCache = new ConcurrentHashMap<>();
-        updateRecords = new ConcurrentHashMap<>();
+        lastUpdated = new ConcurrentHashMap<>();
+        onlinePlayers = new ConcurrentLinkedQueue<>();
     }
 
     public static StatCache getInstance() {
@@ -34,7 +41,7 @@ public final class StatCache {
 
     public void clear() {
         statCache.clear();
-        updateRecords.clear();
+        lastUpdated.clear();
     }
 
     public boolean hasRecordOf(StatType statType) {
@@ -44,19 +51,44 @@ public final class StatCache {
     }
 
     public boolean isTimeToUpdate(StatType statType, int secondsToPass) {
-        long comparison = updateRecords.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
-        return comparison > secondsToPass;
+        long secondsBetween = lastUpdated.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
+        boolean update = secondsBetween > secondsToPass;
+        if (update) {
+            MyLogger.logWarning("Time to update " + statType.statistic());
+        }
+        return update;
     }
 
-    /** Updates the cache for the given StatType with the provided value, or adds a new entry
-     if there are no records of this StatType yet.*/
-    public void update(StatType statType, CompletableFuture<LinkedStatResult> allTopStats) {
+    /** Adds the given StatType to the cache.*/
+    public void add(StatType statType, CompletableFuture<LinkedStatResult> allTopStats) {
         statCache.put(statType, allTopStats);
 
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
         if (unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME) {
-            updateRecords.put(statType, Instant.now());
+            lastUpdated.put(statType, Instant.now());
         }
+    }
+
+    public void update() {
+        MyLogger.logPersistentWarning("Updating cache!");
+        CompletableFuture.runAsync(() -> statCache.entrySet().stream().parallel().forEach(entry -> {
+            if (needsManualUpdating(entry.getKey())) {
+                entry.getValue().thenRunAsync(new Updater(entry));
+            }
+        }));
+    }
+
+    public void addOnlinePlayer(Player player) {
+        onlinePlayers.add(player);
+    }
+
+    public void removeOnlinePlayer(Player player) {
+        onlinePlayers.remove(player);
+        statCache.entrySet().stream().parallel().forEach(entry -> {
+            if (needsManualUpdating(entry.getKey())) {
+                entry.getValue().thenRunAsync(new Updater(entry));
+            }
+        });
     }
 
     /** Update the CompletableFuture for this StatType in the cache with the provided values,
@@ -100,5 +132,32 @@ public final class StatCache {
             statCache.remove(statType);
         }
         return result;
+    }
+
+    private boolean needsManualUpdating(StatType statType) {
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        return unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME;
+    }
+
+    public class Updater implements Runnable {
+
+        private final Map.Entry<StatType, CompletableFuture<LinkedStatResult>> entry;
+
+        public Updater(Map.Entry<StatType, CompletableFuture<LinkedStatResult>> entryToUpdate) {
+            entry = entryToUpdate;
+        }
+
+        @Override
+        public void run() {
+            onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
+                int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
+                entry.getValue().thenApplyAsync(map -> {
+                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with new value for [" + entry.getKey().statistic() + "]");
+                    map.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
+                    lastUpdated.put(entry.getKey(), Instant.now());
+                    return map;
+                });
+            });
+        }
     }
 }
