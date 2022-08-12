@@ -45,7 +45,6 @@ public final class StatCache {
 
     public boolean isTimeToUpdate(StatType statType, int secondsToPass) {
         long comparison = updateRecords.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
-        MyLogger.logWarning("Amount of seconds between update and now: " + comparison);
         return comparison > secondsToPass;
     }
 
@@ -64,10 +63,10 @@ public final class StatCache {
      either when this future has completed or immediately if it is already done.*/
     public void completeWithNewValue(StatType statType, String playerName, int newStatValue) {
         if (statCache.containsKey(statType)) {
-            MyLogger.logWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
+            MyLogger.logPersistentWarning("Update scheduled for [" + playerName + "] with new value [" + newStatValue + "]");
             CompletableFuture<LinkedStatResult> future = statCache.get(statType);
             future.thenApplyAsync(map -> {
-                MyLogger.logWarning("Updating [" + playerName + "] with new value [" + newStatValue + "]");
+                MyLogger.logPersistentWarning("Updating [" + playerName + "] with new value [" + newStatValue + "]");
                 map.insertValueIntoExistingOrder(playerName, newStatValue);
                 return map;
             });

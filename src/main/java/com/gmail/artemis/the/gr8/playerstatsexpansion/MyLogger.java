@@ -15,6 +15,11 @@ public final class MyLogger {
         }
     }
 
+    public static void logPersistentWarning(String msg) {
+        Logger myLogger = Logger.getLogger("PlayerStatsExpansion");
+        myLogger.warning(msg);
+    }
+
     public static void clear() {
         loggedMessages.clear();
     }

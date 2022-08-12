@@ -94,19 +94,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void loadConfigSettings() {
-        distanceUpdateSetting = 10;
-        timeUpdateSetting = 10;
-
-//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
-//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
-    }
-
-    public static int getDistanceUpdateSetting() {
-        return distanceUpdateSetting;
-    }
-
-    public static int getTimeUpdateSetting() {
-        return timeUpdateSetting;
+        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
+        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
     }
 
     /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
@@ -147,6 +136,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             MyLogger.logWarning("playerRequest is null!");
             return null;
         }
+        updateCache(playerRequest);
+        StatType statType = StatType.fromRequest(playerRequest);
+
+        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+        if (linkedResult != null) {
+            int stat = linkedResult.get(processedArgs.playerName);
+            if (processedArgs.isRawNumberRequest) {
+                return stat + "";
+            }
+            return getFormattedPlayerStatResult(stat, processedArgs.playerName, statType);
+        }
 
         StatResult<Integer> result = playerRequest.execute();
         if (processedArgs.isRawNumberRequest) {
@@ -158,10 +158,11 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private @Nullable String getServerStatResult(@NotNull ProcessedArgs processedArgs) {
         StatRequest<Long> serverRequest = getServerRequest(processedArgs);
         if (serverRequest == null) {
+            MyLogger.logWarning("serverRequest is null!");
             return null;
         }
-        StatType statType = StatType.fromRequest(serverRequest);
         updateCache(serverRequest);
+        StatType statType = StatType.fromRequest(serverRequest);
 
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult == null) {
@@ -180,6 +181,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private @Nullable String getTopStatResult(ProcessedArgs processedArgs) {
         StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArgs);
         if (topRequest == null) {
+            MyLogger.logWarning("topRequest is null!");
             return null;
         }
         updateCache(topRequest);
@@ -195,8 +197,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             return linkedResult.getValueAtIndex(lineNumber-1) + "";
         }
         else {
-            Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
-            return getSingleFormattedTopStatLine(linkedResult, lineNumber, unitType);
+            return getSingleFormattedTopStatLine(linkedResult, lineNumber, statType.statistic());
         }
     }
 
@@ -322,11 +323,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         };
     }
 
-    private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Unit.Type unitType) {
+    private String getFormattedPlayerStatResult(int statNumber, String playerName, StatType statType) {
+        Statistic statistic = statType.statistic();
+        String subStatName = statType.getSubStatName();
+        TextComponent result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
+
+        return componentToString(result);
+    }
+
+    private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
         String playerName = topStats.getKeyAtIndex(lineNumber-1);
-        TextComponent result =
-                statFormatter.getTopStatLine(
-                        lineNumber, playerName, topStats.get(playerName), unitType);
+        TextComponent result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
 
         return componentToString(result);
     }
@@ -334,13 +341,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private String getFormattedServerStatResult(long statNumber, StatType statType) {
         Statistic statistic = statType.statistic();
         String subStatName = statType.getSubStatName();
-        TextComponent result;
+        TextComponent result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
 
-        if (subStatName != null) {
-            result = statFormatter.getServerStat(statNumber, statType.statistic(), subStatName);
-        } else {
-            result = statFormatter.getServerStat(statNumber, statistic);
-        }
         return componentToString(result);
     }
 
