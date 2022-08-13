@@ -1,9 +1,10 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
 
 import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.LinkedStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.StatType;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,14 +16,16 @@ import java.util.concurrent.*;
 public final class StatCache {
 
     private volatile static StatCache instance;
+    private volatile Instant lastUpdated;
 
-    private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> statCache;
-    private final ConcurrentHashMap<StatType, Instant> lastUpdated;
+    private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> storedStatResults;
+//    private final ConcurrentHashMap<StatType, Instant> lastUpdatedTimestamps;
     private final ConcurrentLinkedQueue<OfflinePlayer> onlinePlayers;
 
     private StatCache() {
-        statCache = new ConcurrentHashMap<>();
-        lastUpdated = new ConcurrentHashMap<>();
+        lastUpdated = Instant.now();
+
+        storedStatResults = new ConcurrentHashMap<>();
         onlinePlayers = new ConcurrentLinkedQueue<>();
     }
 
@@ -40,34 +43,34 @@ public final class StatCache {
     }
 
     public void clear() {
-        statCache.clear();
-        lastUpdated.clear();
+        storedStatResults.clear();
+        onlinePlayers.clear();
     }
 
     public boolean hasRecordOf(StatType statType) {
-        String record = statCache.containsKey(statType) ? "[yes]" : "[no]";
+        String record = storedStatResults.containsKey(statType) ? "[yes]" : "[no]";
         MyLogger.logWarning("(cache) record of " + statType.statistic() + ": " + record);
-        return statCache.containsKey(statType);
+        return storedStatResults.containsKey(statType);
     }
 
-    public boolean isTimeToUpdate(StatType statType, int secondsToPass) {
-        long secondsBetween = lastUpdated.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
-        return secondsBetween > secondsToPass;
+    public boolean updateIntervalHasPassed() {
+        int updateInterval = PlayerStatsExpansion.getTimeUpdateSetting();
+
+        long secondsBetween = lastUpdated.until(Instant.now(), ChronoUnit.SECONDS);
+        return secondsBetween > updateInterval;
+        //TODO change this into minutes when testing is done
     }
 
     /** Adds the given StatType to the cache.*/
     public void add(StatType statType, CompletableFuture<LinkedStatResult> allTopStats) {
-        statCache.put(statType, allTopStats);
-
-        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
-        if (unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME) {
-            lastUpdated.put(statType, Instant.now());
-        }
+        storedStatResults.put(statType, allTopStats);
     }
 
     public void update() {
+        //TODO rework this to update cache individually for StatTypes
+        lastUpdated = Instant.now();
         MyLogger.logPersistentWarning("Updating cache!");
-        CompletableFuture.runAsync(() -> statCache.entrySet().stream().parallel().forEach(entry -> {
+        CompletableFuture.runAsync(() -> storedStatResults.entrySet().stream().parallel().forEach(entry -> {
             if (needsManualUpdating(entry.getKey())) {
                 entry.getValue().thenRunAsync(new Updater(entry));
             }
@@ -80,18 +83,27 @@ public final class StatCache {
 
     public void removeOnlinePlayer(OfflinePlayer player) {
         onlinePlayers.remove(player);
-        statCache.entrySet().stream().parallel().forEach(entry -> {
+        updateAllForPlayer(player);
+    }
+
+    private void updateAllForPlayer(OfflinePlayer player) {
+        MyLogger.logWarning("Updating values for player " + player.getName());
+        CompletableFuture.runAsync(() -> storedStatResults.entrySet().stream().parallel().forEach(entry -> {
             if (needsManualUpdating(entry.getKey())) {
-                entry.getValue().thenRunAsync(new Updater(entry));
+                int stat = player.getStatistic(entry.getKey().statistic());
+                entry.getValue().thenApplyAsync(linkedResult -> {
+                    linkedResult.insertValueIntoExistingOrder(player.getName(), stat);
+                    return linkedResult;
+                });
             }
-        });
+        }));
     }
 
     /** Update the CompletableFuture for this StatType in the cache with the provided values,
      either when this future has completed or immediately if it is already done.*/
-    public void completeWithNewValue(StatType statType, String playerName, int newStatValue) {
-        if (statCache.containsKey(statType)) {
-            CompletableFuture<LinkedStatResult> future = statCache.get(statType);
+    public void updateValue(StatType statType, String playerName, int newStatValue) {
+        if (storedStatResults.containsKey(statType)) {
+            CompletableFuture<LinkedStatResult> future = storedStatResults.get(statType);
             future.thenApplyAsync(map -> {
                 map.insertValueIntoExistingOrder(playerName, newStatValue);
                 return map;
@@ -103,7 +115,7 @@ public final class StatCache {
      and immediately returns null if that returns false. Otherwise, it tries to get the
      value and return it, with a time-out of 10 seconds to be extra safe.*/
     public @Nullable LinkedStatResult tryToGetCompletableFutureResult(StatType statType) {
-        CompletableFuture<LinkedStatResult> cachedResult = statCache.get(statType);
+        CompletableFuture<LinkedStatResult> cachedResult = storedStatResults.get(statType);
         LinkedStatResult result = null;
         if (!cachedResult.isDone()) {
             MyLogger.logWarning("(cache) waiting for task...");
@@ -113,16 +125,16 @@ public final class StatCache {
             result = cachedResult.get(10, TimeUnit.SECONDS);
         } catch (CancellationException canceled) {
             MyLogger.logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
-            statCache.remove(statType);
+            storedStatResults.remove(statType);
         } catch (InterruptedException interrupted) {
             MyLogger.logWarning("This thread was interrupted while waiting for StatResults");
-            statCache.remove(statType);
+            storedStatResults.remove(statType);
         } catch (ExecutionException exception) {
             MyLogger.logWarning("An ExecutionException occurred while trying to get all statistic values");
-            statCache.remove(statType);
+            storedStatResults.remove(statType);
         } catch (TimeoutException timeoutException) {
             MyLogger.logWarning("a PlaceHolder request has timed out");
-            statCache.remove(statType);
+            storedStatResults.remove(statType);
         }
         return result;
     }
@@ -142,13 +154,12 @@ public final class StatCache {
 
         @Override
         public void run() {
-            lastUpdated.put(entry.getKey(), Instant.now());
             onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
                 int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
-                entry.getValue().thenApplyAsync(map -> {
+                entry.getValue().thenApplyAsync(linkedResult -> {
                     MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with new value [" + newStat + "] for [" + entry.getKey().statistic() + "]");
-                    map.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
-                    return map;
+                    linkedResult.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
+                    return linkedResult;
                 });
             });
         }

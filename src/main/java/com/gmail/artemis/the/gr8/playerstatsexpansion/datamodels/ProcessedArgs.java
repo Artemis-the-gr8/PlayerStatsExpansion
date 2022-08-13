@@ -1,6 +1,7 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels;
 
 import com.gmail.artemis.the.gr8.playerstats.enums.Target;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
@@ -16,10 +17,11 @@ public class ProcessedArgs {
     private final static Pattern targetTopArgPattern;
     private final static Pattern targetPlayerArgPattern;
 
-    protected boolean isRawNumberRequest;
-    protected Target target;
-    protected int topListSize;
-    protected String playerName;
+    private boolean isNumberRequest;
+    private boolean formatNumber = true;
+    private Target target;
+    private int topListSize;
+    private String playerName;
 
     private final String[] statIdentifiers;
 
@@ -29,13 +31,33 @@ public class ProcessedArgs {
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
     }
 
-    //(raw,)   top:n                 stat_name(:sub_stat_name)
-    //(raw,)   player:player_name    stat_name(:sub_stat_name)
-    //(raw,)   server                stat_name(:sub_stat_name)
+    //(number:raw)   top:n                 stat_name(:sub_stat_name)
+    //(number:raw)   player:player_name    stat_name(:sub_stat_name)
+    //(number:raw)   server                stat_name(:sub_stat_name)
     public ProcessedArgs(String args) {
         String[] argsToProcess = args.split(",");
         String[] leftoverArgs = extractAllKeywords(argsToProcess);
         statIdentifiers = leftoverArgs[0].split(":");
+    }
+
+    public boolean getNumberOnly() {
+        return isNumberRequest;
+    }
+
+    public boolean shouldFormatNumber() {
+        return formatNumber;
+    }
+
+    public Target target() {
+        return target;
+    }
+
+    public int topListSize() {
+        return topListSize;
+    }
+
+    public String playerName() {
+        return playerName;
     }
 
     public @Nullable Statistic getStatistic() {
@@ -59,14 +81,19 @@ public class ProcessedArgs {
     }
 
     private String[] extractAllKeywords(String[] argsToProcess) {
-        String[] argsWithoutRawKeyword = extractRawKeyword(argsToProcess);
-        return extractTargetAndTargetArgs(argsWithoutRawKeyword);
+        String[] argsWithoutNumberKeywords = extractNumberKeywords(argsToProcess);
+        return extractTargetAndTargetArgs(argsWithoutNumberKeywords);
     }
 
-    private String[] extractRawKeyword(String[] argsToProcess) {
+    private String[] extractNumberKeywords(String[] argsToProcess) {
+        MyLogger.logWarning("(processing) extracting number keywords: " + Arrays.toString(argsToProcess));
         for (String arg : argsToProcess) {
-            if (arg.equalsIgnoreCase("raw")) {
-                isRawNumberRequest = true;
+            if (arg.contains("number")) {
+                if (arg.equalsIgnoreCase("number")) {
+                    isNumberRequest = true;
+                } else if (arg.equalsIgnoreCase("number:raw")) {
+                    formatNumber = false;
+                }
                 return Arrays.stream(argsToProcess)
                         .filter(string -> !(string.equalsIgnoreCase(arg)))
                         .toArray(String[]::new);
@@ -76,6 +103,7 @@ public class ProcessedArgs {
     }
 
     private String[] extractTargetAndTargetArgs(String[] argsToProcess) {
+        MyLogger.logWarning("(processing) extracting target keywords: " + Arrays.toString(argsToProcess));
         for (String arg : argsToProcess) {
             Matcher matcher = targetPattern.matcher(arg);
             if (matcher.find()) {

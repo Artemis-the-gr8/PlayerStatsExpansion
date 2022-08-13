@@ -4,20 +4,22 @@ import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.gmail.artemis.the.gr8.playerstats.api.*;
 import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
+import com.gmail.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.ProcessedArgs;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.expansion.Cacheable;
 import me.clip.placeholderapi.expansion.Configurable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,14 +30,16 @@ import java.util.concurrent.*;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    private static StatManager statManager;
     private static ApiFormatter statFormatter;
 
+    private static RequestHandler requestHandler;
     private static StatCache statCache;
     private static StatListener statListener;
     private static JoinAndQuitListener joinAndQuitListener;
+
     private static int distanceUpdateSetting;
     private static int timeUpdateSetting;
+    private static int maxTimeUnits;
 
     @Override
     public @NotNull String getIdentifier() {
@@ -62,6 +66,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         Map<String, Object> configValues = new HashMap<>();
         configValues.put("update_interval_in_minutes_for_distance_types", 1);
         configValues.put("update_interval_in_minutes_for_time_types", 1);
+        configValues.put("max_amount_of_smaller_time_units_to_display", 2);
         return configValues;
     }
 
@@ -80,7 +85,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             MyLogger.logWarning("Unable to connect to PlayerStats' API!");
             return false;
         }
-        statManager = playerStats.getStatManager();
+        StatManager statManager = playerStats.getStatManager();
+        requestHandler = new RequestHandler(statManager);
+
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
 
@@ -105,9 +112,18 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private void loadConfigSettings() {
         distanceUpdateSetting = 10;
         timeUpdateSetting = 10;
+        maxTimeUnits = this.getInt("max_amount_of_smaller_time_units_to_display", 2);
 
 //        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
 //        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
+    }
+
+    public static int getTimeUpdateSetting() {
+        return timeUpdateSetting;
+    }
+
+    public static int getDistanceUpdateSetting() {
+        return distanceUpdateSetting;
     }
 
     /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
@@ -130,12 +146,12 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private @Nullable String getStatResult(String args) {
         ProcessedArgs processedArgs = new ProcessedArgs(args);
-        if (processedArgs.target == null) {
+        if (processedArgs.target() == null) {
             MyLogger.logWarning("missing top/server/player selection");
             return null;
         }
 
-        return switch (processedArgs.target) {
+        return switch (processedArgs.target()) {
             case PLAYER -> getPlayerStatResult(processedArgs);
             case SERVER -> getServerStatResult(processedArgs);
             case TOP -> getTopStatResult(processedArgs);
@@ -143,73 +159,81 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Integer> playerRequest = getPlayerRequest(processedArgs);
+        StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(processedArgs);
         if (playerRequest == null) {
             MyLogger.logWarning("playerRequest is null!");
             return null;
         }
         updateCache(playerRequest);
-        StatType statType = StatType.fromRequest(playerRequest);
 
+        StatType statType = StatType.fromRequest(playerRequest);
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult != null) {
-            int stat = linkedResult.get(processedArgs.playerName);
-            if (processedArgs.isRawNumberRequest) {
-                return stat + "";
+            int stat = linkedResult.get(processedArgs.playerName());
+            if (processedArgs.getNumberOnly()) {
+                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
             }
-            return getFormattedPlayerStatResult(stat, processedArgs.playerName, statType);
+            return getFormattedPlayerStatResult(stat, processedArgs.playerName(), statType);
         }
-
-        StatResult<Integer> result = playerRequest.execute();
-        if (processedArgs.isRawNumberRequest) {
-            return result.getNumericalValue().toString();
+        else {
+            StatResult<Integer> result = playerRequest.execute();
+            if (processedArgs.getNumberOnly()) {
+                int stat = result.getNumericalValue();
+                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
+            }
+            return result.getFormattedString();
         }
-        return result.getFormattedString();
     }
 
     private @Nullable String getServerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Long> serverRequest = getServerRequest(processedArgs);
+        StatRequest<Long> serverRequest = requestHandler.getServerRequest(processedArgs);
         if (serverRequest == null) {
             MyLogger.logWarning("serverRequest is null!");
             return null;
         }
         updateCache(serverRequest);
-        StatType statType = StatType.fromRequest(serverRequest);
 
+        StatType statType = StatType.fromRequest(serverRequest);
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult == null) {
             return processingMessage();
         }
 
         long sum = linkedResult.getSumOfAllValues();
-        if (processedArgs.isRawNumberRequest) {
-            return sum + "";
-        }
-        else {
+        if (!processedArgs.getNumberOnly()) {
             return getFormattedServerStatResult(sum, statType);
         }
+        else if (processedArgs.shouldFormatNumber()) {
+            return getFormattedNumber(sum, statType);
+        }
+        return sum + "";
     }
 
     private @Nullable String getTopStatResult(ProcessedArgs processedArgs) {
-        StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArgs);
+        StatRequest<LinkedHashMap<String, Integer>> topRequest = requestHandler.getTopRequest(processedArgs);
         if (topRequest == null) {
             MyLogger.logWarning("topRequest is null!");
             return null;
         }
         updateCache(topRequest);
-        StatType statType = StatType.fromRequest(topRequest);
 
+        StatType statType = StatType.fromRequest(topRequest);
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult == null) {
             return processingMessage();
         }
 
-        int lineNumber = processedArgs.topListSize;
-        if (processedArgs.isRawNumberRequest) {
-            return linkedResult.getValueAtIndex(lineNumber-1) + "";
+        if (!processedArgs.getNumberOnly()) {
+            return getSingleFormattedTopStatLine(linkedResult, processedArgs.topListSize(), statType.statistic());
         }
         else {
-            return getSingleFormattedTopStatLine(linkedResult, lineNumber, statType.statistic());
+            int lineNumber = processedArgs.topListSize();
+            long statNumber = linkedResult.getValueAtIndex(lineNumber-1);
+
+            if (processedArgs.shouldFormatNumber()) {
+                return getFormattedNumber(statNumber, statType);
+            }
+            return statNumber + "";
         }
     }
 
@@ -220,14 +244,14 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
-        else if (updateIntervalHasPassed(statType)){
+        else if (statCache.updateIntervalHasPassed()) {
             statCache.update();
         }
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
         MyLogger.logWarning("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
-        StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopRequest(statRequest);
+        StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
                 CompletableFuture.supplyAsync(() ->
                          new LinkedStatResult(newRequest.execute().getNumericalValue())
@@ -235,104 +259,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
         StatType statType = StatType.fromRequest(newRequest);
         statCache.add(statType, future);
-    }
-
-    private boolean updateIntervalHasPassed(StatType statType) {
-        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
-        if (unitType == Unit.Type.DISTANCE || unitType == Unit.Type.TIME) {
-            int updateInterval = (unitType == Unit.Type.DISTANCE) ? distanceUpdateSetting : timeUpdateSetting;
-            return statCache.isTimeToUpdate(statType, updateInterval);
-        }
-        return false;
-    }
-
-    private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting playerRequest for [" + processedArgs.getStatistic() + "] [" + processedArgs.playerName + "]");
-        String playerName = processedArgs.playerName;
-        if (playerName == null) {
-            MyLogger.logWarning("missing or invalid player-name");
-            return null;
-        }
-
-        RequestGenerator<Integer> requestGenerator = statManager.playerStatRequest(playerName);
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable StatRequest<Long> getServerRequest(ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting serverRequest for [" + processedArgs.getStatistic() + "]");
-        RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting topRequest for [" + processedArgs.getStatistic() + "] [top: " + processedArgs.topListSize + "]");
-        int topListSize = processedArgs.topListSize;
-
-        RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArgs processedArgs) {
-        Statistic stat = processedArgs.getStatistic();
-        if (stat == null) {
-            MyLogger.logWarning("missing or invalid Statistic");
-            return null;
-        }
-
-        switch (stat.getType()) {
-            case UNTYPED -> {
-                return requestGenerator.untyped(stat);
-            }
-            case BLOCK, ITEM -> {
-                Material material = processedArgs.getMaterialSubStat();
-                if (material == null) {
-                    MyLogger.logWarning("missing or invalid Material");
-                    return null;
-                }
-                return requestGenerator.blockOrItemType(stat, material);
-
-            }
-            case ENTITY -> {
-                EntityType entityType = processedArgs.getEntitySubStat();
-                if (entityType == null) {
-                    MyLogger.logWarning("missing or invalid EntityType");
-                    return null;
-                }
-                return requestGenerator.entityType(stat, entityType);
-            }
-            default -> {
-                return null;
-            }
-        }
-    }
-
-    private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
-        MyLogger.logWarning("(main) transforming request into total request for [" + statRequest.getTargetSetting() + "] [" + statRequest.getStatisticSetting() + "]");
-        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
-        Statistic stat = statRequest.getStatisticSetting();
-        return switch (stat.getType()) {
-            case UNTYPED -> generator.untyped(stat);
-            case ENTITY -> {
-                if (statRequest.getEntitySetting() != null) {
-                    yield generator.entityType(stat, statRequest.getEntitySetting());
-                } else {
-                    yield null;
-                }
-            }
-            case BLOCK, ITEM -> {
-                Material material = null;
-                if (statRequest.getBlockSetting() != null) {
-                    material = statRequest.getBlockSetting();
-                } else if (statRequest.getItemSetting() != null) {
-                    material = statRequest.getItemSetting();
-                }
-                if (material != null) {
-                    yield generator.blockOrItemType(stat, material);
-                } else {
-                    yield null;
-                }
-            }
-        };
     }
 
     private String getFormattedPlayerStatResult(int statNumber, String playerName, StatType statType) {
@@ -356,6 +282,22 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         TextComponent result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
 
         return componentToString(result);
+    }
+
+    private String getFormattedNumber(long statNumber, StatType statType) {
+        NumberFormatter numberFormatter = statFormatter.getNumberFormatter();
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        Unit mainUnit = Unit.getMostSuitableUnit(unitType, statNumber);
+
+        return switch (unitType) {
+            case UNTYPED -> numberFormatter.formatNumber(statNumber);
+            case TIME -> {
+                Unit smallUnit = mainUnit.getSmallerUnit(maxTimeUnits);
+                yield numberFormatter.formatTimeNumber(statNumber, mainUnit, smallUnit);
+            }
+            case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, mainUnit);
+            case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, mainUnit);
+        };
     }
 
     private @Nullable String componentToString(TextComponent component) {

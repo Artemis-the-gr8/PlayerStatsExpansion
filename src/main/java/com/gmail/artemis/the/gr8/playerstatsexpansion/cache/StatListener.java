@@ -1,13 +1,11 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
 
-import com.gmail.artemis.the.gr8.playerstatsexpansion.LinkedStatResult;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.StatType;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import org.bukkit.Statistic;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 
-import java.util.concurrent.CompletableFuture;
 
 public final class StatListener implements Listener {
 
@@ -24,21 +22,7 @@ public final class StatListener implements Listener {
         int newValue = event.getNewValue();
 
         if (statCache.hasRecordOf(statType)) {
-            LinkedStatResult linkedStatResult = statCache.tryToGetCompletableFutureResult(statType);
-
-            if (linkedStatResult == null) {
-                statCache.completeWithNewValue(statType, playerName, newValue);
-            }
-            else  {
-                final CompletableFuture<LinkedStatResult> future =
-                        CompletableFuture.supplyAsync(() ->
-                        {
-                            linkedStatResult.insertValueIntoExistingOrder(playerName, newValue);
-                            return linkedStatResult;
-                        });
-
-                statCache.add(statType, future);
-            }
+            statCache.updateValue(statType, playerName, newValue);
         }
     }
 

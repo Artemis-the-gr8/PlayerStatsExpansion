@@ -1,4 +1,4 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels;
 
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import org.bukkit.Material;

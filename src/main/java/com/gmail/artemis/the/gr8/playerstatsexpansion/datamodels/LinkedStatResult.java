@@ -1,4 +1,4 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,7 +15,7 @@ public final class LinkedStatResult {
         statResult.put(playerName, statNumber);
         List<String> playerNames = statResult.keySet().stream().toList();
         int index = playerNames.indexOf(playerName);
-        if (index == -1 || index == 1) {
+        if (index == 0) {
             return;
         }
 
