@@ -86,7 +86,6 @@ public class ProcessedArgs {
     }
 
     private String[] extractNumberKeywords(String[] argsToProcess) {
-        MyLogger.logWarning("(processing) extracting number keywords: " + Arrays.toString(argsToProcess));
         for (String arg : argsToProcess) {
             if (arg.contains("number")) {
                 if (arg.equalsIgnoreCase("number")) {
@@ -103,7 +102,6 @@ public class ProcessedArgs {
     }
 
     private String[] extractTargetAndTargetArgs(String[] argsToProcess) {
-        MyLogger.logWarning("(processing) extracting target keywords: " + Arrays.toString(argsToProcess));
         for (String arg : argsToProcess) {
             Matcher matcher = targetPattern.matcher(arg);
             if (matcher.find()) {

@@ -110,12 +110,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void loadConfigSettings() {
-        distanceUpdateSetting = 10;
-        timeUpdateSetting = 10;
         maxTimeUnits = this.getInt("max_amount_of_smaller_time_units_to_display", 2);
-
-//        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 5) * 60;
-//        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 5) * 60;
+        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 1) * 60;
+        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 1) * 60;
     }
 
     public static int getTimeUpdateSetting() {
@@ -141,7 +138,12 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (prefix != null) {
             return componentToString(prefix);
         }
-        return getStatResult(args);
+        try {
+            return getStatResult(args);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private @Nullable String getStatResult(String args) {
@@ -244,8 +246,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
-        else if (statCache.updateIntervalHasPassed()) {
-            statCache.update();
+        else if (statCache.updateIntervalHasPassed(statType)) {
+            statCache.update(statType);
         }
     }
 
@@ -263,24 +265,49 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private String getFormattedPlayerStatResult(int statNumber, String playerName, StatType statType) {
         Statistic statistic = statType.statistic();
-        String subStatName = statType.getSubStatName();
-        TextComponent result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
 
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
+            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, smallUnit);
+        }
+        else {
+            String subStatName = statType.getSubStatName();
+            result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
+        }
         return componentToString(result);
     }
 
     private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
         String playerName = topStats.getKeyAtIndex(lineNumber-1);
-        TextComponent result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
+        long statNumber = topStats.get(playerName);
 
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
+            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, smallUnit);
+        }
+        else {
+            result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
+        }
         return componentToString(result);
     }
 
     private String getFormattedServerStatResult(long statNumber, StatType statType) {
         Statistic statistic = statType.statistic();
-        String subStatName = statType.getSubStatName();
-        TextComponent result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
 
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
+            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, smallUnit);
+        }
+        else {
+            String subStatName = statType.getSubStatName();
+            result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
+        }
         return componentToString(result);
     }
 

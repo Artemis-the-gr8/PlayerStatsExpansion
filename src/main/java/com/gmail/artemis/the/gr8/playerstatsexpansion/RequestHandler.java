@@ -21,7 +21,6 @@ public class RequestHandler {
     }
 
     public @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting playerRequest for [" + processedArgs.getStatistic() + "] [" + processedArgs.playerName() + "]");
         String playerName = processedArgs.playerName();
         if (playerName == null) {
             MyLogger.logWarning("missing or invalid player-name");
@@ -33,13 +32,11 @@ public class RequestHandler {
     }
 
     public @Nullable StatRequest<Long> getServerRequest(ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting serverRequest for [" + processedArgs.getStatistic() + "]");
         RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
         return createRequest(requestGenerator, processedArgs);
     }
 
     public @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArgs processedArgs) {
-        MyLogger.logWarning("(main) getting topRequest for [" + processedArgs.getStatistic() + "] [top: " + processedArgs.topListSize() + "]");
         int topListSize = processedArgs.topListSize();
 
         RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
@@ -47,7 +44,6 @@ public class RequestHandler {
     }
 
     public StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
-        MyLogger.logWarning("(main) transforming request into total request for [" + statRequest.getTargetSetting() + "] [" + statRequest.getStatisticSetting() + "]");
         RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
         Statistic stat = statRequest.getStatisticSetting();
         return switch (stat.getType()) {

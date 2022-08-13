@@ -16,16 +16,14 @@ import java.util.concurrent.*;
 public final class StatCache {
 
     private volatile static StatCache instance;
-    private volatile Instant lastUpdated;
 
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> storedStatResults;
-//    private final ConcurrentHashMap<StatType, Instant> lastUpdatedTimestamps;
+    private final ConcurrentHashMap<StatType, Instant> lastUpdatedTimestamps;
     private final ConcurrentLinkedQueue<OfflinePlayer> onlinePlayers;
 
     private StatCache() {
-        lastUpdated = Instant.now();
-
         storedStatResults = new ConcurrentHashMap<>();
+        lastUpdatedTimestamps = new ConcurrentHashMap<>();
         onlinePlayers = new ConcurrentLinkedQueue<>();
     }
 
@@ -53,28 +51,38 @@ public final class StatCache {
         return storedStatResults.containsKey(statType);
     }
 
-    public boolean updateIntervalHasPassed() {
-        int updateInterval = PlayerStatsExpansion.getTimeUpdateSetting();
+    public boolean updateIntervalHasPassed(StatType statType) {
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        if (needsManualUpdating(statType)) {
+            int updateInterval = (unitType == Unit.Type.DISTANCE) ?
+                    PlayerStatsExpansion.getDistanceUpdateSetting() :
+                    PlayerStatsExpansion.getTimeUpdateSetting();
 
-        long secondsBetween = lastUpdated.until(Instant.now(), ChronoUnit.SECONDS);
-        return secondsBetween > updateInterval;
+            long secondsBetween = lastUpdatedTimestamps.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
+            return secondsBetween > updateInterval;
+
+        }
+        return false;
         //TODO change this into minutes when testing is done
     }
 
     /** Adds the given StatType to the cache.*/
     public void add(StatType statType, CompletableFuture<LinkedStatResult> allTopStats) {
         storedStatResults.put(statType, allTopStats);
+        lastUpdatedTimestamps.put(statType, Instant.now());
     }
 
-    public void update() {
-        //TODO rework this to update cache individually for StatTypes
-        lastUpdated = Instant.now();
+    public void update(StatType statType) {
+        lastUpdatedTimestamps.put(statType, Instant.now());
         MyLogger.logPersistentWarning("Updating cache!");
-        CompletableFuture.runAsync(() -> storedStatResults.entrySet().stream().parallel().forEach(entry -> {
+
+        Map.Entry<StatType, CompletableFuture<LinkedStatResult>> entry = Map.entry(statType, storedStatResults.get(statType));
+        CompletableFuture.runAsync(() -> {
             if (needsManualUpdating(entry.getKey())) {
+                MyLogger.logWarning("Updating " + entry.getKey().statistic());
                 entry.getValue().thenRunAsync(new Updater(entry));
             }
-        }));
+        });
     }
 
     public void addOnlinePlayer(OfflinePlayer player) {
