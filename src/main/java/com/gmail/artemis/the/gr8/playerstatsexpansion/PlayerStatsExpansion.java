@@ -128,7 +128,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         return distanceUpdateSetting;
     }
 
-    /**format: %playerstats_(number:raw),target(:arg),stat_name:sub_stat_name% */
+    /**format: %playerstats_ (title:n), (number:raw), target(:arg), stat_name:sub_stat_name% */
     @Override
     public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
@@ -157,6 +157,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             MyLogger.logWarning("missing top/server/player selection");
             return null;
         }
+        else if (processedArgs.getTitleOnly()) {
+            return getTitle(processedArgs);
+        }
 
         return switch (processedArgs.target()) {
             case PLAYER -> getPlayerStatResult(processedArgs);
@@ -165,8 +168,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         };
     }
 
-    private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(processedArgs);
+    private String getTitle(ProcessedArgs args) {
+        Statistic stat = args.getStatistic();
+        if (stat == null) {
+            return null;
+        }
+        TextComponent result = statFormatter.getTopStatTitle(args.topListSize(), stat, args.getSubStatName());
+        return componentToString(result);
+    }
+
+    private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs args) {
+        StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(args);
         if (playerRequest == null) {
             MyLogger.logWarning("playerRequest is null!");
             return null;
@@ -176,24 +188,24 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         StatType statType = StatType.fromRequest(playerRequest);
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         if (linkedResult != null) {
-            int stat = linkedResult.get(processedArgs.playerName());
-            if (processedArgs.getNumberOnly()) {
-                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
+            int stat = linkedResult.get(args.playerName());
+            if (args.getNumberOnly()) {
+                return args.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
             }
-            return getFormattedPlayerStatResult(stat, processedArgs.playerName(), statType);
+            return getFormattedPlayerStatResult(stat, args.playerName(), statType);
         }
         else {
             StatResult<Integer> result = playerRequest.execute();
-            if (processedArgs.getNumberOnly()) {
+            if (args.getNumberOnly()) {
                 int stat = result.getNumericalValue();
-                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
+                return args.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
             }
             return result.getFormattedString();
         }
     }
 
-    private @Nullable String getServerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Long> serverRequest = requestHandler.getServerRequest(processedArgs);
+    private @Nullable String getServerStatResult(@NotNull ProcessedArgs args) {
+        StatRequest<Long> serverRequest = requestHandler.getServerRequest(args);
         if (serverRequest == null) {
             MyLogger.logWarning("serverRequest is null!");
             return null;
@@ -207,17 +219,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
 
         long sum = linkedResult.getSumOfAllValues();
-        if (!processedArgs.getNumberOnly()) {
+        if (!args.getNumberOnly()) {
             return getFormattedServerStatResult(sum, statType);
         }
-        else if (processedArgs.shouldFormatNumber()) {
+        else if (args.shouldFormatNumber()) {
             return getFormattedNumber(sum, statType);
         }
         return sum + "";
     }
 
-    private @Nullable String getTopStatResult(ProcessedArgs processedArgs) {
-        StatRequest<LinkedHashMap<String, Integer>> topRequest = requestHandler.getTopRequest(processedArgs);
+    private @Nullable String getTopStatResult(ProcessedArgs args) {
+        StatRequest<LinkedHashMap<String, Integer>> topRequest = requestHandler.getTopRequest(args);
         if (topRequest == null) {
             MyLogger.logWarning("topRequest is null!");
             return null;
@@ -230,14 +242,14 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             return processingMessage();
         }
 
-        if (!processedArgs.getNumberOnly()) {
-            return getSingleFormattedTopStatLine(linkedResult, processedArgs.topListSize(), statType.statistic());
+        if (!args.getNumberOnly()) {
+            return getSingleFormattedTopStatLine(linkedResult, args.topListSize(), statType.statistic());
         }
         else {
-            int lineNumber = processedArgs.topListSize();
+            int lineNumber = args.topListSize();
             long statNumber = linkedResult.getValueAtIndex(lineNumber-1);
 
-            if (processedArgs.shouldFormatNumber()) {
+            if (args.shouldFormatNumber()) {
                 return getFormattedNumber(statNumber, statType);
             }
             return statNumber + "";
@@ -282,16 +294,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
         }
         return componentToString(result);
-    }
-
-    private boolean isNotTooBig(Unit bigUnit) {
-        return switch (maxTimeUnit) {
-            case DAY -> true;
-            case HOUR -> bigUnit != Unit.DAY;
-            case MINUTE -> !(bigUnit == Unit.HOUR || bigUnit == Unit.DAY);
-            case SECOND -> bigUnit == Unit.SECOND;
-            default -> false;
-        };
     }
 
     private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
@@ -339,6 +341,16 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             }
             case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, mainUnit);
             case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, mainUnit);
+        };
+    }
+
+    private boolean isNotTooBig(Unit bigUnit) {
+        return switch (maxTimeUnit) {
+            case DAY -> true;
+            case HOUR -> bigUnit != Unit.DAY;
+            case MINUTE -> !(bigUnit == Unit.HOUR || bigUnit == Unit.DAY);
+            case SECOND -> bigUnit == Unit.SECOND;
+            default -> false;
         };
     }
 
