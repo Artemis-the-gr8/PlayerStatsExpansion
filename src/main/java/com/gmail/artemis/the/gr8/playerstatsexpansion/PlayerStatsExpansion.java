@@ -113,11 +113,11 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void loadConfigSettings() {
-        distanceUpdateSetting = this.getInt("update_interval.distance_statistics", 60);
-        timeUpdateSetting = this.getInt("update_interval.time_statistics", 60);
-
         maxTimeUnit = Unit.fromString(this.getString("display.max_time_unit", "day"));
         minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "minute"));
+
+        distanceUpdateSetting = this.getInt("update_interval.distance_statistics", 60);
+        timeUpdateSetting = this.getInt("update_interval.time_statistics", 60);
     }
 
     public static int getTimeUpdateSetting() {
@@ -180,7 +180,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs args) {
         StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(args);
         if (playerRequest == null) {
-            MyLogger.logWarning("playerRequest is null!");
             return null;
         }
         updateCache(playerRequest);
@@ -207,7 +206,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private @Nullable String getServerStatResult(@NotNull ProcessedArgs args) {
         StatRequest<Long> serverRequest = requestHandler.getServerRequest(args);
         if (serverRequest == null) {
-            MyLogger.logWarning("serverRequest is null!");
             return null;
         }
         updateCache(serverRequest);
@@ -231,7 +229,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private @Nullable String getTopStatResult(ProcessedArgs args) {
         StatRequest<LinkedHashMap<String, Integer>> topRequest = requestHandler.getTopRequest(args);
         if (topRequest == null) {
-            MyLogger.logWarning("topRequest is null!");
             return null;
         }
         updateCache(topRequest);
@@ -269,7 +266,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
-        MyLogger.logWarning("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
+        MyLogger.logInfo("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
         StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
                 CompletableFuture.supplyAsync(() ->

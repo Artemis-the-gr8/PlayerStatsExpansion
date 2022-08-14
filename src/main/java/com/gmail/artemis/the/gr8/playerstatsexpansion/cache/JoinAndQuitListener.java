@@ -16,13 +16,11 @@ public class JoinAndQuitListener implements Listener {
 
     @EventHandler
     public void onPlayerJoinEvent(PlayerJoinEvent event) {
-        MyLogger.logPersistentWarning("Added " + event.getPlayer().getName() + " to the cache!");
         statCache.addOnlinePlayer(event.getPlayer());
     }
 
     @EventHandler
     public void onPlayerQuitEvent(PlayerQuitEvent event) {
-        MyLogger.logPersistentWarning("Removed " + event.getPlayer().getName() + " from the cache!");
         statCache.removeOnlinePlayer(event.getPlayer());
     }
 }

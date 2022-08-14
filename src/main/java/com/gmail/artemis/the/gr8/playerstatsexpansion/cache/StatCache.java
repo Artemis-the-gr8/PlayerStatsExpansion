@@ -46,8 +46,6 @@ public final class StatCache {
     }
 
     public boolean hasRecordOf(StatType statType) {
-        String record = storedStatResults.containsKey(statType) ? "[yes]" : "[no]";
-        MyLogger.logWarning("(cache) record of " + statType.statistic() + ": " + record);
         return storedStatResults.containsKey(statType);
     }
 
@@ -63,7 +61,6 @@ public final class StatCache {
 
         }
         return false;
-        //TODO change this into minutes when testing is done
     }
 
     /** Adds the given StatType to the cache.*/
@@ -78,7 +75,6 @@ public final class StatCache {
         Map.Entry<StatType, CompletableFuture<LinkedStatResult>> entry = Map.entry(statType, storedStatResults.get(statType));
         CompletableFuture.runAsync(() -> {
             if (needsManualUpdating(entry.getKey())) {
-                MyLogger.logPersistentWarning("Updating " + entry.getKey().statistic());
                 entry.getValue().thenRunAsync(new Updater(entry));
             }
         });
@@ -94,7 +90,7 @@ public final class StatCache {
     }
 
     private void updateAllForPlayer(OfflinePlayer player) {
-        MyLogger.logWarning("Updating values for player " + player.getName());
+        MyLogger.logInfo("Updating values for player " + player.getName());
         CompletableFuture.runAsync(() -> storedStatResults.entrySet().stream().parallel().forEach(entry -> {
             if (needsManualUpdating(entry.getKey())) {
                 int stat = player.getStatistic(entry.getKey().statistic());
@@ -125,7 +121,6 @@ public final class StatCache {
         CompletableFuture<LinkedStatResult> cachedResult = storedStatResults.get(statType);
         LinkedStatResult result = null;
         if (!cachedResult.isDone()) {
-            MyLogger.logWarning("(cache) waiting for task...");
             return null;
         }
         try {
@@ -164,7 +159,6 @@ public final class StatCache {
             onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
                 int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
                 entry.getValue().thenApplyAsync(linkedResult -> {
-                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with value [" + newStat + "] for [" + entry.getKey().statistic() + "]");
                     linkedResult.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
                     return linkedResult;
                 });
