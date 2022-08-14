@@ -39,7 +39,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private static int distanceUpdateSetting;
     private static int timeUpdateSetting;
-    private static int maxTimeUnits;
+    private static Unit maxTimeUnit;
+    private static Unit minTimeUnit;
+
 
     @Override
     public @NotNull String getIdentifier() {
@@ -64,9 +66,10 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     @Override
     public Map<String, Object> getDefaults() {
         Map<String, Object> configValues = new HashMap<>();
-        configValues.put("update_interval_in_minutes_for_distance_types", 1);
-        configValues.put("update_interval_in_minutes_for_time_types", 1);
-        configValues.put("max_amount_of_smaller_time_units_to_display", 2);
+        configValues.put("display.max_time_unit", "day");
+        configValues.put("display.min_time_unit", "minute");
+        configValues.put("update_interval.distance_statistics", 60);
+        configValues.put("update_interval.time_statistics", 60);
         return configValues;
     }
 
@@ -110,9 +113,11 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void loadConfigSettings() {
-        maxTimeUnits = this.getInt("max_amount_of_smaller_time_units_to_display", 2);
-        distanceUpdateSetting = this.getInt("update_interval_in_minutes_for_distance_types", 1) * 60;
-        timeUpdateSetting = this.getInt("update_interval_in_minutes_for_time_types", 1) * 60;
+        distanceUpdateSetting = this.getInt("update_interval.distance_statistics", 60);
+        timeUpdateSetting = this.getInt("update_interval.time_statistics", 60);
+
+        maxTimeUnit = Unit.fromString(this.getString("display.max_time_unit", "day"));
+        minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "minute"));
     }
 
     public static int getTimeUpdateSetting() {
@@ -123,7 +128,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         return distanceUpdateSetting;
     }
 
-    /**format: %playerstats_target:arg,stat_name:sub_stat_name% */
+    /**format: %playerstats_(number:raw),target(:arg),stat_name:sub_stat_name% */
     @Override
     public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
@@ -246,7 +251,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
-        else if (statCache.updateIntervalHasPassed(statType)) {
+        else if (statCache.needsUpdatingYet(statType)) {
             statCache.update(statType);
         }
     }
@@ -268,9 +273,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
-            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
-            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, smallUnit);
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, minTimeUnit);
         }
         else {
             String subStatName = statType.getSubStatName();
@@ -279,15 +284,25 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         return componentToString(result);
     }
 
+    private boolean isNotTooBig(Unit bigUnit) {
+        return switch (maxTimeUnit) {
+            case DAY -> true;
+            case HOUR -> bigUnit != Unit.DAY;
+            case MINUTE -> !(bigUnit == Unit.HOUR || bigUnit == Unit.DAY);
+            case SECOND -> bigUnit == Unit.SECOND;
+            default -> false;
+        };
+    }
+
     private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
         String playerName = topStats.getKeyAtIndex(lineNumber-1);
         long statNumber = topStats.get(playerName);
 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
-            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
-            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, smallUnit);
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, minTimeUnit);
         }
         else {
             result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
@@ -300,9 +315,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
-            Unit bigUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit smallUnit = bigUnit.getSmallerUnit(maxTimeUnits);
-            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, smallUnit);
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, minTimeUnit);
         }
         else {
             String subStatName = statType.getSubStatName();
@@ -319,8 +334,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         return switch (unitType) {
             case UNTYPED -> numberFormatter.formatNumber(statNumber);
             case TIME -> {
-                Unit smallUnit = mainUnit.getSmallerUnit(maxTimeUnits);
-                yield numberFormatter.formatTimeNumber(statNumber, mainUnit, smallUnit);
+                Unit bigUnit = isNotTooBig(mainUnit) ? mainUnit : maxTimeUnit;
+                yield numberFormatter.formatTimeNumber(statNumber, bigUnit, minTimeUnit);
             }
             case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, mainUnit);
             case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, mainUnit);

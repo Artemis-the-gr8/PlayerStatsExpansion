@@ -51,7 +51,7 @@ public final class StatCache {
         return storedStatResults.containsKey(statType);
     }
 
-    public boolean updateIntervalHasPassed(StatType statType) {
+    public boolean needsUpdatingYet(StatType statType) {
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
         if (needsManualUpdating(statType)) {
             int updateInterval = (unitType == Unit.Type.DISTANCE) ?
@@ -74,12 +74,11 @@ public final class StatCache {
 
     public void update(StatType statType) {
         lastUpdatedTimestamps.put(statType, Instant.now());
-        MyLogger.logPersistentWarning("Updating cache!");
 
         Map.Entry<StatType, CompletableFuture<LinkedStatResult>> entry = Map.entry(statType, storedStatResults.get(statType));
         CompletableFuture.runAsync(() -> {
             if (needsManualUpdating(entry.getKey())) {
-                MyLogger.logWarning("Updating " + entry.getKey().statistic());
+                MyLogger.logPersistentWarning("Updating " + entry.getKey().statistic());
                 entry.getValue().thenRunAsync(new Updater(entry));
             }
         });
@@ -165,7 +164,7 @@ public final class StatCache {
             onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
                 int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
                 entry.getValue().thenApplyAsync(linkedResult -> {
-                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with new value [" + newStat + "] for [" + entry.getKey().statistic() + "]");
+                    MyLogger.logPersistentWarning("Updating [" + onlinePlayer.getName() + "] with value [" + newStat + "] for [" + entry.getKey().statistic() + "]");
                     linkedResult.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);
                     return linkedResult;
                 });

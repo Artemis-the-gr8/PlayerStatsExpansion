@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 
-public class RequestHandler {
+final class RequestHandler {
 
     private final StatManager statManager;
 

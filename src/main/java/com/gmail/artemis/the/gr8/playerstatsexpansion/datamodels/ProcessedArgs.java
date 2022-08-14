@@ -36,7 +36,8 @@ public class ProcessedArgs {
     //(number:raw)   server                stat_name(:sub_stat_name)
     public ProcessedArgs(String args) {
         String[] argsToProcess = args.split(",");
-        String[] leftoverArgs = extractAllKeywords(argsToProcess);
+        String[] whiteSpaceStrippedArgs = stripWhiteSpaces(argsToProcess);
+        String[] leftoverArgs = extractAllKeywords(whiteSpaceStrippedArgs);
         statIdentifiers = leftoverArgs[0].split(":");
     }
 
@@ -80,6 +81,12 @@ public class ProcessedArgs {
         }
     }
 
+    private String[] stripWhiteSpaces(String[] argsToProcess) {
+        return Arrays.stream(argsToProcess)
+                .map(arg -> arg.replaceAll(" ", ""))
+                .toArray(String[]::new);
+    }
+
     private String[] extractAllKeywords(String[] argsToProcess) {
         String[] argsWithoutNumberKeywords = extractNumberKeywords(argsToProcess);
         return extractTargetAndTargetArgs(argsWithoutNumberKeywords);
@@ -91,6 +98,7 @@ public class ProcessedArgs {
                 if (arg.equalsIgnoreCase("number")) {
                     isNumberRequest = true;
                 } else if (arg.equalsIgnoreCase("number:raw")) {
+                    isNumberRequest = true;
                     formatNumber = false;
                 }
                 return Arrays.stream(argsToProcess)
