@@ -3,48 +3,80 @@ package com.gmail.artemis.the.gr8.playerstatsexpansion;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
 import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.gmail.artemis.the.gr8.playerstats.api.*;
+import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
+import com.gmail.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
 import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
-import com.gmail.artemis.the.gr8.playerstats.statistic.result.TopStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.ProcessedArgs;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import me.clip.placeholderapi.PlaceholderAPIPlugin;
+import me.clip.placeholderapi.expansion.Cacheable;
+import me.clip.placeholderapi.expansion.Configurable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
-import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
-import java.util.logging.Logger;
 
-public class PlayerStatsExpansion extends PlaceholderExpansion {
+public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    private static StatManager statManager;
     private static ApiFormatter statFormatter;
 
+    private static RequestHandler requestHandler;
     private static StatCache statCache;
+    private static StatListener statListener;
+    private static JoinAndQuitListener joinAndQuitListener;
+
+    private static int distanceUpdateSetting;
+    private static int timeUpdateSetting;
+    private static Unit maxTimeUnit;
+    private static Unit minTimeUnit;
+
 
     @Override
-    public String getIdentifier() {
+    public @NotNull String getIdentifier() {
         return "playerstats";
     }
 
     @Override
-    public String getAuthor() {
+    public @NotNull String getAuthor() {
         return "Artemis";
     }
 
     @Override
-    public String getVersion() {
+    public @NotNull String getVersion() {
         return "1.0.0";
     }
 
     @Override
-    public String getRequiredPlugin() {
+    public @NotNull String getRequiredPlugin() {
         return "PlayerStats";
+    }
+
+    @Override
+    public Map<String, Object> getDefaults() {
+        Map<String, Object> configValues = new HashMap<>();
+        configValues.put("display.max_time_unit", "day");
+        configValues.put("display.min_time_unit", "minute");
+        configValues.put("update_interval.distance_statistics", 60);
+        configValues.put("update_interval.time_statistics", 60);
+        return configValues;
+    }
+
+    @Override
+    public void clear() {
+        MyLogger.clear();
+        statCache.clear();
     }
 
     @Override
@@ -53,16 +85,50 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         try {
             playerStats = PlayerStats.getAPI();
         } catch (IllegalStateException e) {
-            logWarning("Unable to connect to PlayerStats' API!");
+            MyLogger.logWarning("Unable to connect to PlayerStats' API!");
             return false;
         }
-        statManager = playerStats.getStatManager();
+        StatManager statManager = playerStats.getStatManager();
+        requestHandler = new RequestHandler(statManager);
+
         statFormatter = playerStats.getFormatter();
         statCache = StatCache.getInstance();
+
+        loadConfigSettings();
+        registerListeners();
         return true;
     }
 
-    /**format: %playerstats_<\stat_name>_<\sub_stat_name>_<\target>_<\player-name>% */
+    private void registerListeners() {
+        if (statListener == null) {
+            statListener = new StatListener();
+            Bukkit.getPluginManager().registerEvents(
+                    statListener, PlaceholderAPIPlugin.getInstance());
+        }
+        if (joinAndQuitListener == null) {
+            joinAndQuitListener = new JoinAndQuitListener();
+            Bukkit.getPluginManager().registerEvents(
+                    joinAndQuitListener, PlaceholderAPIPlugin.getInstance());
+        }
+    }
+
+    private void loadConfigSettings() {
+        distanceUpdateSetting = this.getInt("update_interval.distance_statistics", 60);
+        timeUpdateSetting = this.getInt("update_interval.time_statistics", 60);
+
+        maxTimeUnit = Unit.fromString(this.getString("display.max_time_unit", "day"));
+        minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "minute"));
+    }
+
+    public static int getTimeUpdateSetting() {
+        return timeUpdateSetting;
+    }
+
+    public static int getDistanceUpdateSetting() {
+        return distanceUpdateSetting;
+    }
+
+    /**format: %playerstats_(number:raw),target(:arg),stat_name:sub_stat_name% */
     @Override
     public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
@@ -77,17 +143,22 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         if (prefix != null) {
             return componentToString(prefix);
         }
-        return getStatResult(args);
+        try {
+            return getStatResult(args);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
-    private String getStatResult(String args) {
+    private @Nullable String getStatResult(String args) {
         ProcessedArgs processedArgs = new ProcessedArgs(args);
-        if (processedArgs.target == null) {
-            logWarning("missing top/server/player selection");
+        if (processedArgs.target() == null) {
+            MyLogger.logWarning("missing top/server/player selection");
             return null;
         }
 
-        return switch (processedArgs.target) {
+        return switch (processedArgs.target()) {
             case PLAYER -> getPlayerStatResult(processedArgs);
             case SERVER -> getServerStatResult(processedArgs);
             case TOP -> getTopStatResult(processedArgs);
@@ -95,218 +166,180 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
     }
 
     private @Nullable String getPlayerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Integer> playerRequest = getPlayerRequest(processedArgs);
+        StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(processedArgs);
         if (playerRequest == null) {
+            MyLogger.logWarning("playerRequest is null!");
             return null;
         }
+        updateCache(playerRequest);
 
-        StatResult<Integer> result = playerRequest.execute();
-        if (processedArgs.isRawNumberRequest) {
-            return result.getNumericalValue().toString();
+        StatType statType = StatType.fromRequest(playerRequest);
+        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+        if (linkedResult != null) {
+            int stat = linkedResult.get(processedArgs.playerName());
+            if (processedArgs.getNumberOnly()) {
+                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
+            }
+            return getFormattedPlayerStatResult(stat, processedArgs.playerName(), statType);
         }
-        return result.getFormattedString();
+        else {
+            StatResult<Integer> result = playerRequest.execute();
+            if (processedArgs.getNumberOnly()) {
+                int stat = result.getNumericalValue();
+                return processedArgs.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
+            }
+            return result.getFormattedString();
+        }
     }
 
     private @Nullable String getServerStatResult(@NotNull ProcessedArgs processedArgs) {
-        StatRequest<Long> serverRequest = getServerRequest(processedArgs);
+        StatRequest<Long> serverRequest = requestHandler.getServerRequest(processedArgs);
         if (serverRequest == null) {
+            MyLogger.logWarning("serverRequest is null!");
             return null;
         }
-        updateCacheIfNeeded(serverRequest);
-        Statistic stat = serverRequest.getStatisticSetting();
+        updateCache(serverRequest);
 
-        CompletableFuture<TopStatResult> future = statCache.get(stat);
-        if (Bukkit.isPrimaryThread()) {
-            if (!future.isDone()) {
-                return "Processing...";
-            }
+        StatType statType = StatType.fromRequest(serverRequest);
+        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+        if (linkedResult == null) {
+            return processingMessage();
         }
-        TopStatResult result = tryToGetCompletableFutureResult(future);
-        if (result == null) {
-            statCache.remove(stat);
-            return null;
+
+        long sum = linkedResult.getSumOfAllValues();
+        if (!processedArgs.getNumberOnly()) {
+            return getFormattedServerStatResult(sum, statType);
         }
-        else if (processedArgs.isRawNumberRequest) {
-            return getRawServerStatResult(result.getNumericalValue()) + "";
+        else if (processedArgs.shouldFormatNumber()) {
+            return getFormattedNumber(sum, statType);
         }
-        else {
-            return getFormattedServerStatResult(result.getNumericalValue(), stat);
-        }
+        return sum + "";
     }
 
     private @Nullable String getTopStatResult(ProcessedArgs processedArgs) {
-        StatRequest<LinkedHashMap<String, Integer>> topRequest = getTopRequest(processedArgs);
+        StatRequest<LinkedHashMap<String, Integer>> topRequest = requestHandler.getTopRequest(processedArgs);
         if (topRequest == null) {
+            MyLogger.logWarning("topRequest is null!");
             return null;
         }
-        updateCacheIfNeeded(topRequest);
-        Statistic stat = topRequest.getStatisticSetting();
+        updateCache(topRequest);
 
-        CompletableFuture<TopStatResult> future = statCache.get(stat);
-        if (Bukkit.isPrimaryThread()) {
-            if (!future.isDone()) {
-                return "Processing...";
-            }
+        StatType statType = StatType.fromRequest(topRequest);
+        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+        if (linkedResult == null) {
+            return processingMessage();
         }
-        TopStatResult result = tryToGetCompletableFutureResult(future);
-        if (result == null) {
-            statCache.remove(stat);
-            return null;
-        }
-        else if (processedArgs.isRawNumberRequest) {
-            int lineNumber = processedArgs.topListSize;
-            return getSingleNumberFromTopStatResult(result, lineNumber) + "";
+
+        if (!processedArgs.getNumberOnly()) {
+            return getSingleFormattedTopStatLine(linkedResult, processedArgs.topListSize(), statType.statistic());
         }
         else {
-            return getSingleFormattedTopStatLine(result, processedArgs);
+            int lineNumber = processedArgs.topListSize();
+            long statNumber = linkedResult.getValueAtIndex(lineNumber-1);
+
+            if (processedArgs.shouldFormatNumber()) {
+                return getFormattedNumber(statNumber, statType);
+            }
+            return statNumber + "";
         }
     }
 
-    private void updateCacheIfNeeded(StatRequest<?> statRequest) {
-        Statistic stat = statRequest.getStatisticSetting();
-        if (!statCache.hasRecordOf(stat)) {
+    /** Checks if the {@link StatType} of this StatRequest is already stored in the {@link StatCache},
+     and adds it to the cache if not.*/
+    private void updateCache(StatRequest<?> statRequest) {
+        StatType statType = StatType.fromRequest(statRequest);
+        if (!statCache.hasRecordOf(statType)) {
             saveToCache(statRequest);
         }
-    }
-
-    private @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
-        String playerName = processedArgs.playerName;
-        if (playerName == null) {
-            logWarning("missing or invalid player-name");
-            return null;
-        }
-
-        RequestGenerator<Integer> requestGenerator = statManager.playerStatRequest(playerName);
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable StatRequest<Long> getServerRequest(ProcessedArgs processedArgs) {
-        RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArgs processedArgs) {
-        int topListSize = processedArgs.topListSize;
-
-        RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
-        return createRequest(requestGenerator, processedArgs);
-    }
-
-    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArgs processedArgs) {
-        Statistic stat = processedArgs.getStatistic();
-        if (stat == null) {
-            logWarning("missing or invalid Statistic");
-            return null;
-        }
-
-        switch (stat.getType()) {
-            case UNTYPED -> {
-                return requestGenerator.untyped(stat);
-            }
-            case BLOCK, ITEM -> {
-                Material material = processedArgs.getMaterialSubStat();
-                if (material == null) {
-                    logWarning("missing or invalid Material");
-                    return null;
-                }
-                return requestGenerator.blockOrItemType(stat, material);
-
-            }
-            case ENTITY -> {
-                EntityType entityType = processedArgs.getEntitySubStat();
-                if (entityType == null) {
-                    logWarning("missing or invalid EntityType");
-                    return null;
-                }
-                return requestGenerator.entityType(stat, entityType);
-            }
-            default -> {
-                return null;
-            }
+        else if (statCache.needsUpdatingYet(statType)) {
+            statCache.update(statType);
         }
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
-        StatRequest<LinkedHashMap<String, Integer>> newRequest = transformIntoTotalTopRequest(statRequest);
-        final CompletableFuture<TopStatResult> future =
-                CompletableFuture.supplyAsync(() -> (TopStatResult) newRequest.execute());
+        MyLogger.logWarning("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
+        StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
+        final CompletableFuture<LinkedStatResult> future =
+                CompletableFuture.supplyAsync(() ->
+                         new LinkedStatResult(newRequest.execute().getNumericalValue())
+                );
 
-        statCache.store(newRequest.getStatisticSetting(), future);
+        StatType statType = StatType.fromRequest(newRequest);
+        statCache.add(statType, future);
     }
 
-    private StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
-        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
-        Statistic stat = statRequest.getStatisticSetting();
-        return switch (stat.getType()) {
-            case UNTYPED -> generator.untyped(stat);
-            case ENTITY -> {
-                if (statRequest.getEntitySetting() != null) {
-                    yield generator.entityType(stat, statRequest.getEntitySetting());
-                } else {
-                    yield null;
-                }
-            }
-            case BLOCK, ITEM -> {
-                Material material = null;
-                if (statRequest.getBlockSetting() != null) {
-                    material = statRequest.getBlockSetting();
-                } else if (statRequest.getItemSetting() != null) {
-                    material = statRequest.getItemSetting();
-                }
-                if (material != null) {
-                    yield generator.blockOrItemType(stat, material);
-                } else {
-                    yield null;
-                }
-            }
-        };
-    }
+    private String getFormattedPlayerStatResult(int statNumber, String playerName, StatType statType) {
+        Statistic statistic = statType.statistic();
 
-    private String getSingleFormattedTopStatLine (TopStatResult topStats, ProcessedArgs processedArgs) {
-        int lineNumber = processedArgs.topListSize;
-        LinkedHashMap<String, Integer> numbers = topStats.getNumericalValue();
-        String[] playerNames = numbers.keySet().toArray(new String[0]);
-        String playerName = playerNames[lineNumber-1];
-        TextComponent result =
-                statFormatter.getFormattedTopStatLine(
-                        lineNumber, playerName, numbers.get(playerName), processedArgs.getStatistic());
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, minTimeUnit);
+        }
+        else {
+            String subStatName = statType.getSubStatName();
+            result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
+        }
         return componentToString(result);
     }
 
-    private int getSingleNumberFromTopStatResult(TopStatResult topStats, int lineNumber) {
-        LinkedHashMap<String, Integer> numbers = topStats.getNumericalValue();
-        String[] playerNames = numbers.keySet().toArray(new String[0]);
-        return numbers.get(playerNames[lineNumber-1]);
+    private boolean isNotTooBig(Unit bigUnit) {
+        return switch (maxTimeUnit) {
+            case DAY -> true;
+            case HOUR -> bigUnit != Unit.DAY;
+            case MINUTE -> !(bigUnit == Unit.HOUR || bigUnit == Unit.DAY);
+            case SECOND -> bigUnit == Unit.SECOND;
+            default -> false;
+        };
     }
 
-    private String getFormattedServerStatResult(LinkedHashMap<String, Integer> allStats, Statistic statistic) {
-        long result = getRawServerStatResult(allStats);
-        TextComponent prettyResult = statFormatter.getFormattedServerStat(result, statistic);
-        return componentToString(prettyResult);
-    }
+    private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
+        String playerName = topStats.getKeyAtIndex(lineNumber-1);
+        long statNumber = topStats.get(playerName);
 
-    private long getRawServerStatResult(LinkedHashMap<String, Integer> allStats) {
-        List<Integer> numbers = allStats
-                .values()
-                .parallelStream()
-                .toList();
-        return numbers.parallelStream().mapToLong(Integer::longValue).sum();
-    }
-
-    private @Nullable TopStatResult tryToGetCompletableFutureResult(CompletableFuture<TopStatResult> future) {
-        TopStatResult result = null;
-        try {
-            result = future.get(60, TimeUnit.SECONDS);
-        } catch (CancellationException canceled) {
-            logWarning("Attempting to get a Future value from a CompletableFuture that is canceled!");
-        } catch (InterruptedException interrupted) {
-            logWarning("This thread was interrupted while waiting for StatResults");
-        } catch (ExecutionException exception) {
-            logWarning("An ExecutionException occurred while trying to get all statistic values");
-        } catch (TimeoutException timeoutException) {
-            logWarning("a PlaceHolder request has timed out");
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, minTimeUnit);
         }
-        return result;
+        else {
+            result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
+        }
+        return componentToString(result);
+    }
+
+    private String getFormattedServerStatResult(long statNumber, StatType statType) {
+        Statistic statistic = statType.statistic();
+
+        TextComponent result;
+        if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
+            Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
+            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, minTimeUnit);
+        }
+        else {
+            String subStatName = statType.getSubStatName();
+            result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
+        }
+        return componentToString(result);
+    }
+
+    private String getFormattedNumber(long statNumber, StatType statType) {
+        NumberFormatter numberFormatter = statFormatter.getNumberFormatter();
+        Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        Unit mainUnit = Unit.getMostSuitableUnit(unitType, statNumber);
+
+        return switch (unitType) {
+            case UNTYPED -> numberFormatter.formatNumber(statNumber);
+            case TIME -> {
+                Unit bigUnit = isNotTooBig(mainUnit) ? mainUnit : maxTimeUnit;
+                yield numberFormatter.formatTimeNumber(statNumber, bigUnit, minTimeUnit);
+            }
+            case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, mainUnit);
+            case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, mainUnit);
+        };
     }
 
     private @Nullable String componentToString(TextComponent component) {
@@ -316,8 +349,8 @@ public class PlayerStatsExpansion extends PlaceholderExpansion {
         return statFormatter.TextComponentToString(component);
     }
 
-    public static void logWarning(String msg) {
-        Logger myLogger = Logger.getLogger("PlayerStatsExpansion");
-        myLogger.warning(msg);
+    private String processingMessage() {
+        TextComponent msg = (TextComponent) MiniMessage.miniMessage().deserialize("<#ADE7FF>Processing...");
+        return componentToString(msg);
     }
 }

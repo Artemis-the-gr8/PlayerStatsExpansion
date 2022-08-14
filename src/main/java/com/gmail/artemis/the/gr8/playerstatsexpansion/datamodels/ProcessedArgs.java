@@ -1,6 +1,7 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels;
 
 import com.gmail.artemis.the.gr8.playerstats.enums.Target;
+import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
@@ -16,10 +17,11 @@ public class ProcessedArgs {
     private final static Pattern targetTopArgPattern;
     private final static Pattern targetPlayerArgPattern;
 
-    protected boolean isRawNumberRequest;
-    protected Target target;
-    protected int topListSize;
-    protected String playerName;
+    private boolean isNumberRequest;
+    private boolean formatNumber = true;
+    private Target target;
+    private int topListSize;
+    private String playerName;
 
     private final String[] statIdentifiers;
 
@@ -29,13 +31,34 @@ public class ProcessedArgs {
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
     }
 
-    //(raw,)   top:n                 stat_name(:sub_stat_name)
-    //(raw,)   player:player_name    stat_name(:sub_stat_name)
-    //(raw,)   server                stat_name(:sub_stat_name)
+    //(number:raw)   top:n                 stat_name(:sub_stat_name)
+    //(number:raw)   player:player_name    stat_name(:sub_stat_name)
+    //(number:raw)   server                stat_name(:sub_stat_name)
     public ProcessedArgs(String args) {
         String[] argsToProcess = args.split(",");
-        String[] leftoverArgs = extractAllKeywords(argsToProcess);
+        String[] whiteSpaceStrippedArgs = stripWhiteSpaces(argsToProcess);
+        String[] leftoverArgs = extractAllKeywords(whiteSpaceStrippedArgs);
         statIdentifiers = leftoverArgs[0].split(":");
+    }
+
+    public boolean getNumberOnly() {
+        return isNumberRequest;
+    }
+
+    public boolean shouldFormatNumber() {
+        return formatNumber;
+    }
+
+    public Target target() {
+        return target;
+    }
+
+    public int topListSize() {
+        return topListSize;
+    }
+
+    public String playerName() {
+        return playerName;
     }
 
     public @Nullable Statistic getStatistic() {
@@ -47,32 +70,37 @@ public class ProcessedArgs {
     }
 
     public @Nullable Material getMaterialSubStat() {
-        if (statIdentifiers.length <= 1) {
-            return null;
-        }
         return Material.matchMaterial(statIdentifiers[1]);
     }
 
     public @Nullable EntityType getEntitySubStat() {
-        if (statIdentifiers.length <= 1) {
-            return null;
-        }
         try {
-            return EntityType.valueOf(statIdentifiers[1]);
+            return EntityType.valueOf(statIdentifiers[1].toUpperCase());
         } catch (IllegalArgumentException e) {
             return null;
         }
     }
 
-    private String[] extractAllKeywords(String[] argsToProcess) {
-        String[] argsWithoutRawKeyword = extractRawKeyword(argsToProcess);
-        return extractTargetAndTargetArgs(argsWithoutRawKeyword);
+    private String[] stripWhiteSpaces(String[] argsToProcess) {
+        return Arrays.stream(argsToProcess)
+                .map(arg -> arg.replaceAll(" ", ""))
+                .toArray(String[]::new);
     }
 
-    private String[] extractRawKeyword(String[] argsToProcess) {
+    private String[] extractAllKeywords(String[] argsToProcess) {
+        String[] argsWithoutNumberKeywords = extractNumberKeywords(argsToProcess);
+        return extractTargetAndTargetArgs(argsWithoutNumberKeywords);
+    }
+
+    private String[] extractNumberKeywords(String[] argsToProcess) {
         for (String arg : argsToProcess) {
-            if (arg.equalsIgnoreCase("raw")) {
-                isRawNumberRequest = true;
+            if (arg.contains("number")) {
+                if (arg.equalsIgnoreCase("number")) {
+                    isNumberRequest = true;
+                } else if (arg.equalsIgnoreCase("number:raw")) {
+                    isNumberRequest = true;
+                    formatNumber = false;
+                }
                 return Arrays.stream(argsToProcess)
                         .filter(string -> !(string.equalsIgnoreCase(arg)))
                         .toArray(String[]::new);
@@ -111,12 +139,12 @@ public class ProcessedArgs {
                 String match = matcher.group();
                 return Integer.parseInt(match);
             } catch (NumberFormatException e) {
-                PlayerStatsExpansion.logWarning("NumberFormatException!");
+                MyLogger.logWarning("NumberFormatException!");
             } catch (Exception ex) {
-                PlayerStatsExpansion.logWarning("Unexpected Exception! " + ex);
+                MyLogger.logWarning("Unexpected Exception! " + ex);
             }
         }
-        PlayerStatsExpansion.logWarning("No valid rank-number found for top-selection!");
+        MyLogger.logWarning("No valid line-number found for top-selection!");
         return 1;
     }
 
@@ -125,7 +153,7 @@ public class ProcessedArgs {
         if (matcher.find()) {
             return matcher.group();
         }
-        PlayerStatsExpansion.logWarning("No valid player-name found for player-selection!");
+        MyLogger.logWarning("No valid player-name found for player-selection!");
         return null;
     }
 }
