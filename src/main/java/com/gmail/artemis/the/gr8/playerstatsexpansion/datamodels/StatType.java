@@ -18,18 +18,6 @@ public record StatType(Statistic statistic, @Nullable Material material, @Nullab
         };
     }
 
-    public static StatType fromProcessedArgs(ProcessedArgs processedArgs) {
-        Statistic stat = processedArgs.getStatistic();
-        if (stat != null) {
-            return switch (stat.getType()) {
-                case UNTYPED -> new StatType(stat, null, null);
-                case BLOCK, ITEM -> new StatType(stat, processedArgs.getMaterialSubStat(), null);
-                case ENTITY -> new StatType(stat, null, processedArgs.getEntitySubStat());
-            };
-        }
-        return null;
-    }
-
     public String getSubStatName() {
         return switch (statistic().getType()) {
             case BLOCK, ITEM -> {

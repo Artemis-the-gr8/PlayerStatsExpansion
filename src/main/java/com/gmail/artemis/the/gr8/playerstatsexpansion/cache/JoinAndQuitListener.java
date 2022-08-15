@@ -1,12 +1,11 @@
 package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
 
-import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-public class JoinAndQuitListener implements Listener {
+public final class JoinAndQuitListener implements Listener {
 
     private static StatCache statCache;
 

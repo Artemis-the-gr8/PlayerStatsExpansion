@@ -5,6 +5,7 @@ import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResul
 import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
 import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +26,8 @@ public final class StatCache {
         storedStatResults = new ConcurrentHashMap<>();
         lastUpdatedTimestamps = new ConcurrentHashMap<>();
         onlinePlayers = new ConcurrentLinkedQueue<>();
+
+        onlinePlayers.addAll(Bukkit.getOnlinePlayers());
     }
 
     public static StatCache getInstance() {
@@ -42,6 +45,7 @@ public final class StatCache {
 
     public void clear() {
         storedStatResults.clear();
+        lastUpdatedTimestamps.clear();
         onlinePlayers.clear();
     }
 
@@ -51,16 +55,17 @@ public final class StatCache {
 
     public boolean needsUpdatingYet(StatType statType) {
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
+        boolean update = false;
         if (needsManualUpdating(statType)) {
-            int updateInterval = (unitType == Unit.Type.DISTANCE) ?
+            double updateInterval = (unitType == Unit.Type.DISTANCE) ?
                     PlayerStatsExpansion.getDistanceUpdateSetting() :
                     PlayerStatsExpansion.getTimeUpdateSetting();
 
             long secondsBetween = lastUpdatedTimestamps.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
-            return secondsBetween > updateInterval;
+            update = secondsBetween > updateInterval;
 
         }
-        return false;
+        return update;
     }
 
     /** Adds the given StatType to the cache.*/
@@ -90,7 +95,6 @@ public final class StatCache {
     }
 
     private void updateAllForPlayer(OfflinePlayer player) {
-        MyLogger.logInfo("Updating values for player " + player.getName());
         CompletableFuture.runAsync(() -> storedStatResults.entrySet().stream().parallel().forEach(entry -> {
             if (needsManualUpdating(entry.getKey())) {
                 int stat = player.getStatistic(entry.getKey().statistic());

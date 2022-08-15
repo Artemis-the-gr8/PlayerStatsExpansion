@@ -20,6 +20,7 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
+import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,8 +38,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private static StatListener statListener;
     private static JoinAndQuitListener joinAndQuitListener;
 
-    private static int distanceUpdateSetting;
-    private static int timeUpdateSetting;
+    private static double distanceUpdateSetting;
+    private static double timeUpdateSetting;
     private static Unit maxTimeUnit;
     private static Unit minTimeUnit;
 
@@ -67,9 +68,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     public Map<String, Object> getDefaults() {
         Map<String, Object> configValues = new HashMap<>();
         configValues.put("display.max_time_unit", "day");
-        configValues.put("display.min_time_unit", "minute");
-        configValues.put("update_interval.distance_statistics", 60);
-        configValues.put("update_interval.time_statistics", 60);
+        configValues.put("display.min_time_unit", "second");
+        configValues.put("update_interval_in_seconds.distance_statistics", 1);
+        configValues.put("update_interval_in_seconds.time_statistics", 1);
         return configValues;
     }
 
@@ -77,6 +78,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     public void clear() {
         MyLogger.clear();
         statCache.clear();
+
+        unregisterListeners();
     }
 
     @Override
@@ -112,20 +115,29 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
     }
 
+    private void unregisterListeners() {
+        if (statListener != null) {
+            HandlerList.unregisterAll(statListener);
+        }
+        if (joinAndQuitListener != null) {
+            HandlerList.unregisterAll(joinAndQuitListener);
+        }
+    }
+
     private void loadConfigSettings() {
         maxTimeUnit = Unit.fromString(this.getString("display.max_time_unit", "day"));
-        minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "minute"));
+        minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "second"));
 
-        distanceUpdateSetting = this.getInt("update_interval.distance_statistics", 60);
-        timeUpdateSetting = this.getInt("update_interval.time_statistics", 60);
+        distanceUpdateSetting = this.getDouble("update_interval_in_seconds.distance_statistics", 1.0);
+        timeUpdateSetting = this.getDouble("update_interval_in_seconds.time_statistics", 1.0);
     }
 
-    public static int getTimeUpdateSetting() {
-        return timeUpdateSetting;
+    public static double getTimeUpdateSetting() {
+        return timeUpdateSetting - 0.01;
     }
 
-    public static int getDistanceUpdateSetting() {
-        return distanceUpdateSetting;
+    public static double getDistanceUpdateSetting() {
+        return distanceUpdateSetting - 0.01;
     }
 
     /**format: %playerstats_ (title:n), (number:raw), target(:arg), stat_name:sub_stat_name% */
