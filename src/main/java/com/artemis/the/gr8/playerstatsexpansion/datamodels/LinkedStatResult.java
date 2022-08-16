@@ -1,4 +1,4 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels;
+package com.artemis.the.gr8.playerstatsexpansion.datamodels;
 
 import java.util.*;
 import java.util.stream.Collectors;

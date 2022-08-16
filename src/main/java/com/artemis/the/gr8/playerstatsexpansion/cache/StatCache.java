@@ -1,10 +1,10 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
+package com.artemis.the.gr8.playerstatsexpansion.cache;
 
-import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.MyLogger;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import com.artemis.the.gr8.playerstats.enums.Unit;
+import com.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import com.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.Nullable;

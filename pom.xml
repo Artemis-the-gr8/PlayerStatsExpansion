@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.gmail.artemis.the.gr8</groupId>
+    <groupId>io.github.ithotl</groupId>
     <artifactId>PlayerStatsExpansion</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <name>PlayerStatsExpansion</name>
-    <description>Adds placeholders to PlayerStats</description>
+    <description>Adds placeholders for PlayerStats</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -43,9 +43,10 @@
         </dependency>
 
         <dependency>
-            <groupId>com.gmail.artemis.the.gr8</groupId>
+            <groupId>io.github.ithotl</groupId>
             <artifactId>PlayerStats</artifactId>
-            <version>1.6.1</version>
+            <version>1.7</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

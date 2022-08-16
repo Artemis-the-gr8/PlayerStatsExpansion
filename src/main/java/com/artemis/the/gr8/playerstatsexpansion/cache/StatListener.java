@@ -1,6 +1,6 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
+package com.artemis.the.gr8.playerstatsexpansion.cache;
 
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import org.bukkit.Statistic;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

@@ -1,4 +1,4 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.artemis.the.gr8.playerstatsexpansion;
 
 import java.util.ArrayList;
 import java.util.logging.Logger;

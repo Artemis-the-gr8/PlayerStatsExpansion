@@ -1,18 +1,20 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion;
+package com.artemis.the.gr8.playerstatsexpansion;
 
-import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
-import com.gmail.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
-import com.gmail.artemis.the.gr8.playerstats.api.*;
-import com.gmail.artemis.the.gr8.playerstats.enums.Unit;
-import com.gmail.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
-import com.gmail.artemis.the.gr8.playerstats.statistic.request.StatRequest;
-import com.gmail.artemis.the.gr8.playerstats.statistic.result.StatResult;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.ProcessedArgs;
-import com.gmail.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
+import com.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
+import com.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
+import com.artemis.the.gr8.playerstats.api.ApiFormatter;
+import com.artemis.the.gr8.playerstats.api.PlayerStats;
+import com.artemis.the.gr8.playerstats.api.StatManager;
+import com.artemis.the.gr8.playerstats.enums.Unit;
+import com.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
+import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
+import com.artemis.the.gr8.playerstats.statistic.result.StatResult;
+import com.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
+import com.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
+import com.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.ProcessedArgs;
+import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import me.clip.placeholderapi.expansion.Cacheable;
 import me.clip.placeholderapi.expansion.Configurable;
@@ -28,6 +30,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
+
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 

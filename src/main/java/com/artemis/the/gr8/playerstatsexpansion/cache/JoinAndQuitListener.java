@@ -1,4 +1,4 @@
-package com.gmail.artemis.the.gr8.playerstatsexpansion.cache;
+package com.artemis.the.gr8.playerstatsexpansion.cache;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
