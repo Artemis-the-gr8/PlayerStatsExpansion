@@ -10,6 +10,21 @@
     <name>PlayerStatsExpansion</name>
     <description>Adds placeholders for PlayerStats</description>
 
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Artemis</name>
+            <email>artemis.the.gr8@gmail.com</email>
+            <url>https://github.com/Artemis-the-gr8</url>
+        </developer>
+    </developers>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <java.version>16</java.version>
