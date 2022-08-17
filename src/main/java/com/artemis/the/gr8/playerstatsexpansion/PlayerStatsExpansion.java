@@ -268,8 +268,10 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
     }
 
-    /** Checks if the {@link StatType} of this StatRequest is already stored in the {@link StatCache},
-     and adds it to the cache if not.*/
+    /**
+     * Checks if the {@link StatType} of this StatRequest is already
+     * stored in the {@link StatCache}, and adds it to the cache if not.
+     */
     private void updateCache(StatRequest<?> statRequest) {
         StatType statType = StatType.fromRequest(statRequest);
         if (!statCache.hasRecordOf(statType)) {
@@ -281,7 +283,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private void saveToCache(StatRequest<?> statRequest) {
-        MyLogger.logInfo("(main) saving " + statRequest.getStatisticSetting() + " to the Cache...");
+        MyLogger.logInfo("Storing " + statRequest.getStatisticSetting() + " in the cache...");
         StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
                 CompletableFuture.supplyAsync(() ->

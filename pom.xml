@@ -25,6 +25,11 @@
             <id>placeholderapi</id>
             <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
         </repository>
+
+        <repository>
+            <id>sonatype-oss-snapshots1</id> <!-- the OSSRH repository for snapshots -->
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -45,7 +50,7 @@
         <dependency>
             <groupId>io.github.ithotl</groupId>
             <artifactId>PlayerStats</artifactId>
-            <version>1.7</version>
+            <version>1.7-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
