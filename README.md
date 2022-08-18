@@ -84,7 +84,7 @@ In this example, you can see that the statistic does not have a sub-statistic, s
 
 ![server](src/main/resources/images/placeholder_server.png)
 
-&nbsp;  
+&nbsp;
 
 ### Title
 On top of the statistic-placeholders, there are also placeholders to display the statistic-names in a pretty way.
