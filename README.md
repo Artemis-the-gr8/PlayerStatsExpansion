@@ -142,7 +142,8 @@ Finally, there are some placeholders to get the PlayerStats prefix, either as a 
 
 ## Statistic Choices
 
-The placeholders support all vanilla Minecraft statistics.  
+The placeholders support all vanilla Minecraft 
+[statistics](https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Statistic.html).  
 These statistics can be divided into two types: **general** ones, and ones that need a 
 [block](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html), 
 [item](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html) or 
