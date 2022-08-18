@@ -1,12 +1,14 @@
 # PlayerStatsExpansion
 
 Adds placeholders for [PlayerStats](https://www.spigotmc.org/resources/playerstats.102347/)!  
-On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#examples). 
-&nbsp;  
-&nbsp;  
+
+On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#full-example). 
+
+&nbsp;
 
 
 ## General Formatting Rules
+
 * Each placeholder starts with `%playerstats_`
 * The different keywords of a placeholder are separated by **commas**: 
     - `%playerstats_ x, y, z%`
@@ -15,6 +17,7 @@ On this page, you'll find an explanation of how to use the placeholders, includi
 * Whitespaces are allowed
 
 &nbsp;
+
 
 ## Keywords
 
@@ -29,18 +32,30 @@ The available keywords are:
         - `title: n` - get a pretty name for a top-n-statistic list
 - **statistic**: 
     - `name: sub-name` - see [Statistic Choices](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#statistic-choices) for more information
-  
-&nbsp;
-
-So, a valid placeholder could look like this: `%playerstats_ selection, stat_name%`  
-Or this: `%playerstats_ number:raw, selection: arg, stat_name: sub_stat_name%`
 
 &nbsp;
+
+**Important: selection and statistic must always be included!**  
+So, valid placeholders could look like this: 
+
+```
+* %playerstats_ selection, stat_name%
+* %playerstats_ selection: arg, stat_name%
+* %playerstats_ selection: arg, stat_name: sub_stat_name%
+* %playerstats_ number, selection: arg, stat_name: sub_stat_name%
+* %playerstats_ number: raw, selection: arg, stat_name: sub_stat_name%
+```
+
+&nbsp;
+
 
 ## Placeholders
+
 You can use placeholders to display the 3 different kinds of statistics PlayerStats offers:
 
+
 ### Top-x
+
 Top-placeholders display a single line from a top-statistic. The number specified for `n`
 determines which line is shown.  
 In this example, you would get the player in position 2 of the most-killed-zombies-list.
@@ -56,7 +71,9 @@ In this example, you would get the player in position 2 of the most-killed-zombi
 
 &nbsp;
 
+
 ### Player
+
 The player-name needs to be from a player that has played on the server, and is not being excluded by any of PlayerStats' config settings
 (for example the `exclude-banned-players` setting).  
 
@@ -73,7 +90,9 @@ In this example, you can see that the statistic does not have a sub-statistic, s
 
 &nbsp;
 
+
 ### Server
+
 ```
 %playerstats_ server, stat_name: sub_stat_name%
 
@@ -86,7 +105,9 @@ In this example, you can see that the statistic does not have a sub-statistic, s
 
 &nbsp;
 
+
 ### Title
+
 On top of the statistic-placeholders, there are also placeholders to display the statistic-names in a pretty way.
 To include "Top x" before the stat-name, include a number after the `title` selection.  
 
@@ -102,6 +123,7 @@ To include "Top x" before the stat-name, include a number after the `title` sele
 
 &nbsp;
 
+
 ### PlayerStats Prefix
 
 Finally, there are some placeholders to get the PlayerStats prefix, either as a title or as a regular prefix:
@@ -115,8 +137,11 @@ Finally, there are some placeholders to get the PlayerStats prefix, either as a 
 
 ![prefix](src/main/resources/images/placeholder_prefix.png)
 
+&nbsp;
+
 
 ## Statistic Choices
+
 The placeholders support all vanilla Minecraft statistics.  
 These statistics can be divided into two types: **general** ones, and ones that need a 
 [block](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html), 
@@ -219,7 +244,9 @@ The stat_names are the same as they are for PlayerStats' `/stat` command, so you
         
 &nbsp;
 
+
 ## Full Example
+
 The below picture includes the following placeholders:
 
 ```
