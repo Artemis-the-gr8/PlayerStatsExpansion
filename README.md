@@ -29,7 +29,12 @@ You can use placeholders to display 3 different kinds of statistics:
 ...
 
 ## Statistic Choices
-The statistics in a placeholder can be separated into two types. For blocks, items and entities, there are:
+The placeholders support all vanilla Minecraft statistics, as they are declared in the 
+[Bukkit API](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Statistic.html).  
+These statistics can be divided into two types: **general** ones, and ones that need a 
+[block](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html), 
+[item](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html) or 
+[entity](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html) as **sub-statistic**.
 
 ```
 - mine_block: block_name
