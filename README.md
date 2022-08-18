@@ -14,24 +14,122 @@ On this page, you'll find an explanation of how to use the placeholders, includi
     - `%playerstats_ x:1, y, z%`
 * Whitespaces are allowed
 
-## Structure
-You can use placeholders to display 3 different kinds of statistics:
+&nbsp;
 
-|     prefix    | selection |:| specification | statistic |       example     |
-| ------------- | --------- |-| ------------- | --------- |  ---------------- |
-| %playerstats_ | top       |:| line-number   | [stat_name](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#statistic-choices) |  `%playerstats_ top:1, animals_bred%` |
-|               | player    |:| player-name   |           |  `%playerstats_ player:Artemis_the_gr8, jump%` |
-|               | server    | |               |           |  `%playerstats_ server, deaths%` |
+## Keywords
+
+The available keywords are:
+- `number` - an optional keyword signalling that only the stat-number should be displayed, without the other information. 
+- `number:raw` - if the arg raw is included, the number will be stripped of any formatting and color.
+- **selection**: 
+    - `top: n` - get a single line from a top-statistic-list
+    - `player: player-name` - get a player-statistic 
+    - `server` - get a server-statistic
+    - `title` - get a pretty name for a statistic
+        - `title: n` - get a pretty name for a top-n-statistic list
+- **statistic**: 
+    - `name: sub-name` - see [Statistic Choices](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#statistic-choices) for more information
+  
+&nbsp;
+
+So, a valid placeholder could look like this: `%playerstats_ selection, stat_name%`  
+Or this: `%playerstats_ number:raw, selection: arg, stat_name: sub_stat_name%`
+
+&nbsp;
+
+## Placeholders
+You can use placeholders to display the 3 different kinds of statistics PlayerStats offers:
+
+### Top-x
+Top-placeholders display a single line from a top-statistic. The number specified for `n`
+determines which line is shown.  
+In this example, you would get the player in position 2 of the most-killed-zombies-list.
+
+```
+%playerstats_ top: n, stat_name: sub_stat_name%
+
+# Example:
+%playerstats_ top: 2, kill_entity: zombie%
+```
+
+![top_2](src/main/resources/images/placeholder_top.png)
+
+&nbsp;
+
+### Player
+The player-name needs to be from a player that has played on the server, and is not being excluded by any of PlayerStats' config settings
+(for example the `exclude-banned-players` setting).  
+
+In this example, you can see that the statistic does not have a sub-statistic, so it does not need to be filled in here.  
+
+```
+%playerstats_ player: player-name, stat_name: sub_stat_name%`  
+
+# Example:
+%playerstats_ player:Artemis_the_gr8, jump%
+```
+
+![player](src/main/resources/images/placeholder_player.png)
+
+&nbsp;
+
+### Server
+```
+%playerstats_ server, stat_name: sub_stat_name%
+
+
+# Example:
+%playerstats_ server, play_one_minute%  
+```
+
+![server](src/main/resources/images/placeholder_server.png)
 
 &nbsp;  
 
-## Keywords
-...
-
-## Statistic Choices
-The statistics in a placeholder can be separated into two types. For blocks, items and entities, there are:
+### Title
+On top of the statistic-placeholders, there are also placeholders to display the statistic-names in a pretty way.
+To include "Top x" before the stat-name, include a number after the `title` selection.  
 
 ```
+%playerstats_ title: n, stat_name: sub_stat_name%
+
+# Example:
+%playerstats_ title:3, damage_dealt%
+```  
+
+![title_top](src/main/resources/images/placeholder_title_top.png)
+![title](src/main/resources/images/placeholder_title.png)
+
+&nbsp;
+
+### PlayerStats Prefix
+
+Finally, there are some placeholders to get the PlayerStats prefix, either as a title or as a regular prefix:
+
+```
+- %playerstats_prefix%
+- %playerstats_prefixtitle%
+- %playerstats_rainbowprefix%
+- %playerstats_rainbowprefixtitle%
+```
+
+![prefix](src/main/resources/images/placeholder_prefix.png)
+
+
+## Statistic Choices
+The placeholders support all vanilla Minecraft statistics.  
+These statistics can be divided into two types: **general** ones, and ones that need a 
+[block](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html), 
+[item](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html) or 
+[entity](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html) as **sub-statistic**.
+  
+The stat_names are the same as they are for PlayerStats' `/stat` command, so you can always check with PlayerStats' tab-complete function to verify.
+
+  
+#### All Supported Statistics:
+
+```
+### For block, item and entity:
 - mine_block: block_name
 - craft_item: item_name
 - use_item: item_name
@@ -40,10 +138,8 @@ The statistics in a placeholder can be separated into two types. For blocks, ite
 - drop: item_name
 - kill_entity: entity_name
 - entity_killed_by: entity_name
-```
-All of the above need a sub-statistic as an argument to work (the block, item, or entity-name).  
-These are all the general statistics:
-```
+
+### General:
 - animals_bred
 - armor_cleaned
 - aviate_one_cm
@@ -120,12 +216,27 @@ These are all the general statistics:
 - walk_one_cm
 - walk_under_water_one_cm
 ```
-
+        
 &nbsp;
-&nbsp;
-## Examples
 
-*(the below picture includes the following placeholders...)*
+## Full Example
+The below picture includes the following placeholders:
+
+```
+- %playerstats_ rainbowprefixtitle%
+- %playerstats_ title:3, damage_dealt%
+- %playerstats_ top:1, damage_dealt%
+- %playerstats_ top:2, damage_dealt%
+- %playerstats_ top:3, damage_dealt%
+- :D (not a placeholder)
+- %playerstats_ player:Artemis_the_gr8, jump%
+- %playerstats_ server, play_one_minute%
+- %playerstats_ server, walk_one_cm%
+- ...
+- %playerstats_ title, aviate_one_cm%
+- %playerstats_ title:10, entity_killed_by: zombie%
+```
+
 <p align="center">
    <img src="src/main/resources/images/placeholders.png">
 </p>
