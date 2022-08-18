@@ -35,15 +35,15 @@ The available keywords are:
 
 &nbsp;
 
-**Important: selection and statistic must always be included!**  
+**Important: a keyword for selection and statistic must always be included!**  
 So, valid placeholders could look like this: 
 
 ```
-* %playerstats_ selection, stat_name%
-* %playerstats_ selection: arg, stat_name%
-* %playerstats_ selection: arg, stat_name: sub_stat_name%
-* %playerstats_ number, selection: arg, stat_name: sub_stat_name%
-* %playerstats_ number: raw, selection: arg, stat_name: sub_stat_name%
+* %playerstats_ server, animals_bred%
+* %playerstats_ title: 3, cake_slices_eaten%
+* %playerstats_ top: 5, deaths%
+* %playerstats_ number, player: Artemis_the_gr8, mine_block: diorite%
+* %playerstats_ number: raw, player: Artemis_the_gr8, break_item: diamond_sword%
 ```
 
 &nbsp;
@@ -80,7 +80,7 @@ The player-name needs to be from a player that has played on the server, and is 
 In this example, you can see that the statistic does not have a sub-statistic, so it does not need to be filled in here.  
 
 ```
-%playerstats_ player: player-name, stat_name: sub_stat_name%`  
+%playerstats_ player: player-name, stat_name: sub_stat_name%  
 
 # Example:
 %playerstats_ player:Artemis_the_gr8, jump%
