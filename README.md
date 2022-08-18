@@ -31,7 +31,7 @@ The available keywords are:
     - `title` - get a pretty name for a statistic
         - `title: n` - get a pretty name for a top-n-statistic list
 - **statistic**: 
-    - `name: sub-name` - see [Statistic Choices](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/edit/main/README.md#statistic-choices) for more information
+    - `name: sub-name` - see [Statistic Choices](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/blob/main/README.md#statistic-choices) for more information
 
 &nbsp;
 
