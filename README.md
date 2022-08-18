@@ -2,7 +2,7 @@
 
 Adds placeholders for [PlayerStats](https://www.spigotmc.org/resources/playerstats.102347/)!  
 
-On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](src/main/REDME.md#full-example). 
+On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](src/main/README.md#full-example). 
 
 &nbsp;
 
