@@ -1,6 +1,8 @@
 package com.artemis.the.gr8.playerstatsexpansion;
 
+import com.artemis.the.gr8.lib.kyori.adventure.text.Component;
 import com.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
+import com.artemis.the.gr8.lib.kyori.adventure.text.format.TextColor;
 import com.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstats.api.ApiFormatter;
 import com.artemis.the.gr8.playerstats.api.PlayerStats;
@@ -26,7 +28,6 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -35,16 +36,13 @@ import java.util.concurrent.*;
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
     private static ApiFormatter statFormatter;
+    private static PlayerStatsExpansion instance;
+    private static Config config;
 
-    private static RequestHandler requestHandler;
-    private static StatCache statCache;
-    private static StatListener statListener;
-    private static JoinAndQuitListener joinAndQuitListener;
-
-    private static double distanceUpdateSetting;
-    private static double timeUpdateSetting;
-    private static Unit maxTimeUnit;
-    private static Unit minTimeUnit;
+    private RequestHandler requestHandler;
+    private StatCache statCache;
+    private StatListener statListener;
+    private JoinAndQuitListener joinAndQuitListener;
 
 
     @Override
@@ -59,7 +57,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.0";
+        return "1.1.0";
     }
 
     @Override
@@ -69,11 +67,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public Map<String, Object> getDefaults() {
-        Map<String, Object> configValues = new HashMap<>();
-        configValues.put("display.max_time_unit", "day");
-        configValues.put("display.min_time_unit", "second");
+        Map<String, Object> configValues = new LinkedHashMap<>();
         configValues.put("update_interval_in_seconds.distance_statistics", 1);
         configValues.put("update_interval_in_seconds.time_statistics", 1);
+        configValues.put("display.max_time_unit", "day");
+        configValues.put("display.min_time_unit", "second");
+        configValues.put("display.distance_unit", "blocks");
+        configValues.put("display.damage_unit", "hearts");
+        configValues.put("display.processing_message_color", "#ADE7FF");
+        configValues.put("display.only_player_name_color", "");
+        configValues.put("display.only_stat_number_color", "");
+
         return configValues;
     }
 
@@ -95,12 +99,13 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             return false;
         }
         StatManager statManager = playerStats.getStatManager();
-        requestHandler = new RequestHandler(statManager);
-
         statFormatter = playerStats.getFormatter();
+
+        instance = this;
+        config = new Config(this);
+        requestHandler = new RequestHandler(statManager);
         statCache = StatCache.getInstance();
 
-        loadConfigSettings();
         registerListeners();
         return true;
     }
@@ -127,23 +132,21 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
     }
 
-    private void loadConfigSettings() {
-        maxTimeUnit = Unit.fromString(this.getString("display.max_time_unit", "day"));
-        minTimeUnit = Unit.fromString(this.getString("display.min_time_unit", "second"));
+    public static Config getConfig() {
+        Config localVariable = config;
+        if (localVariable != null) {
+            return localVariable;
+        }
 
-        distanceUpdateSetting = this.getDouble("update_interval_in_seconds.distance_statistics", 1.0);
-        timeUpdateSetting = this.getDouble("update_interval_in_seconds.time_statistics", 1.0);
+        synchronized (PlayerStatsExpansion.class) {
+            if (config == null) {
+                config = new Config(instance);
+            }
+            return config;
+        }
     }
 
-    public static double getTimeUpdateSetting() {
-        return timeUpdateSetting - 0.01;
-    }
-
-    public static double getDistanceUpdateSetting() {
-        return distanceUpdateSetting - 0.01;
-    }
-
-    /**format: %playerstats_ (title:n), (number:raw), target(:arg), stat_name:sub_stat_name% */
+    /**format: %playerstats_ (only:number(_raw)|player_name), target(:arg), stat_name:sub_stat_name% */
     @Override
     public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
@@ -168,12 +171,12 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private @Nullable String getStatResult(String args) {
         ProcessedArgs processedArgs = new ProcessedArgs(args);
-        if (processedArgs.target() == null) {
+        if (processedArgs.getTitleOnly()) {
+            return getTitle(processedArgs);
+        }
+        else if (processedArgs.target() == null) {
             MyLogger.logWarning("missing top/server/player selection");
             return null;
-        }
-        else if (processedArgs.getTitleOnly()) {
-            return getTitle(processedArgs);
         }
 
         return switch (processedArgs.target()) {
@@ -188,7 +191,14 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (stat == null) {
             return null;
         }
-        TextComponent result = statFormatter.getTopStatTitle(args.topListSize(), stat, args.getSubStatName());
+
+        TextComponent result;
+        Unit unit = getDisplayUnitFromStatistic(stat);
+        if (unit == null) {
+            result = statFormatter.getTopStatTitle(args.topListSize(), stat, args.getSubStatName());
+        } else {
+            result = statFormatter.getTopStatTitle(args.topListSize(), stat, unit);
+        }
         return componentToString(result);
     }
 
@@ -201,21 +211,23 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
         StatType statType = StatType.fromRequest(playerRequest);
         LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+        int stat;
         if (linkedResult != null) {
-            int stat = linkedResult.get(args.playerName());
-            if (args.getNumberOnly()) {
-                return args.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
-            }
-            return getFormattedPlayerStatResult(stat, args.playerName(), statType);
+            stat = linkedResult.get(args.playerName());
         }
         else {
             StatResult<Integer> result = playerRequest.execute();
-            if (args.getNumberOnly()) {
-                int stat = result.getNumericalValue();
-                return args.shouldFormatNumber() ? getFormattedNumber(stat, statType) : stat + "";
-            }
-            return result.getFormattedString();
+            stat = result.getNumericalValue();
         }
+
+        if (args.getNumberOnly()) {
+            String number = args.getRawNumber() ? stat + "" : getFormattedNumber(stat, statType);
+            return getColoredStatNumber(number);
+        }
+        else if (args.getPlayerNameOnly()) {
+            return getColoredPlayerName(args.playerName());
+        }
+        return getFormattedPlayerStatResult(stat, args.playerName(), statType);
     }
 
     private @Nullable String getServerStatResult(@NotNull ProcessedArgs args) {
@@ -232,13 +244,14 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
 
         long sum = linkedResult.getSumOfAllValues();
-        if (!args.getNumberOnly()) {
-            return getFormattedServerStatResult(sum, statType);
+        if (args.getNumberOnly()) {
+            String number = args.getRawNumber() ? sum + "" : getFormattedNumber(sum, statType);
+            return getColoredStatNumber(number);
         }
-        else if (args.shouldFormatNumber()) {
-            return getFormattedNumber(sum, statType);
+        else if (args.getPlayerNameOnly()) {
+            return null;
         }
-        return sum + "";
+        return getFormattedServerStatResult(sum, statType);
     }
 
     private @Nullable String getTopStatResult(ProcessedArgs args) {
@@ -254,18 +267,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
             return processingMessage();
         }
 
-        if (!args.getNumberOnly()) {
-            return getSingleFormattedTopStatLine(linkedResult, args.topListSize(), statType.statistic());
-        }
-        else {
-            int lineNumber = args.topListSize();
+        int lineNumber = args.topListSize();
+        if (args.getNumberOnly()) {
             long statNumber = linkedResult.getValueAtIndex(lineNumber-1);
-
-            if (args.shouldFormatNumber()) {
-                return getFormattedNumber(statNumber, statType);
-            }
-            return statNumber + "";
+            String number = args.getRawNumber() ? statNumber + "" : getFormattedNumber(statNumber, statType);
+            return getColoredStatNumber(number);
         }
+        else if (args.getPlayerNameOnly()) {
+            String playerName = linkedResult.getKeyAtIndex(lineNumber-1);
+            return getColoredPlayerName(playerName);
+        }
+        return getSingleFormattedTopStatLine(linkedResult, args.topListSize(), statType.statistic());
     }
 
     /**
@@ -300,12 +312,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
             Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
-            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, minTimeUnit);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : config.maxTimeUnit;
+            result = statFormatter.formatPlayerStatForTypeTime(playerName, statNumber, statistic, bigUnit, config.minTimeUnit);
         }
         else {
-            String subStatName = statType.getSubStatName();
-            result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
+            Unit unit = getDisplayUnitFromStatistic(statistic);
+            if (unit == null) {
+                String subStatName = statType.getSubStatName();
+                result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, subStatName);
+            } else {
+                result = statFormatter.formatPlayerStat(playerName, statNumber, statistic, unit);
+            }
         }
         return componentToString(result);
     }
@@ -317,8 +334,8 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
             Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
-            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, minTimeUnit);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : config.maxTimeUnit;
+            result = statFormatter.formatTopStatLineForTypeTime(lineNumber, playerName, statNumber, bigUnit, config.minTimeUnit);
         }
         else {
             result = statFormatter.formatTopStatLine(lineNumber, playerName, topStats.get(playerName), statistic);
@@ -332,12 +349,17 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         TextComponent result;
         if (Unit.getTypeFromStatistic(statistic) == Unit.Type.TIME) {
             Unit bestUnit = Unit.getMostSuitableUnit(Unit.Type.TIME, statNumber);
-            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : maxTimeUnit;
-            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, minTimeUnit);
+            Unit bigUnit = isNotTooBig(bestUnit) ? bestUnit : config.maxTimeUnit;
+            result = statFormatter.formatServerStatForTypeTime(statNumber, statistic, bigUnit, config.minTimeUnit);
         }
         else {
-            String subStatName = statType.getSubStatName();
-            result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
+            Unit unit = getDisplayUnitFromStatistic(statistic);
+            if (unit == null) {
+                String subStatName = statType.getSubStatName();
+                result = statFormatter.formatServerStat(statNumber, statistic, subStatName);
+            } else {
+                result = statFormatter.formatServerStat(statNumber, statistic, unit);
+            }
         }
         return componentToString(result);
     }
@@ -345,21 +367,48 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     private String getFormattedNumber(long statNumber, StatType statType) {
         NumberFormatter numberFormatter = statFormatter.getNumberFormatter();
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
-        Unit mainUnit = Unit.getMostSuitableUnit(unitType, statNumber);
 
         return switch (unitType) {
             case UNTYPED -> numberFormatter.formatNumber(statNumber);
             case TIME -> {
-                Unit bigUnit = isNotTooBig(mainUnit) ? mainUnit : maxTimeUnit;
-                yield numberFormatter.formatTimeNumber(statNumber, bigUnit, minTimeUnit);
+                Unit bigTimeUnit = Unit.getMostSuitableUnit(unitType, statNumber);
+                Unit bigUnit = isNotTooBig(bigTimeUnit) ? bigTimeUnit : config.maxTimeUnit;
+                yield numberFormatter.formatTimeNumber(statNumber, bigUnit, config.minTimeUnit);
             }
-            case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, mainUnit);
-            case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, mainUnit);
+            case DAMAGE -> numberFormatter.formatDamageNumber(statNumber, config.damageUnit);
+            case DISTANCE -> numberFormatter.formatDistanceNumber(statNumber, config.distanceUnit);
+        };
+    }
+
+    private String getColoredStatNumber(String statNumber) {
+        TextColor color = config.statNumberColor;
+        if (color == null) {
+            return statNumber;
+        }
+        TextComponent number = Component.text(statNumber).color(color);
+        return componentToString(number);
+    }
+
+    private String getColoredPlayerName(String playerName) {
+        TextColor color = config.playerNameColor;
+        if (color == null) {
+            return playerName;
+        }
+        TextComponent name = Component.text(playerName).color(color);
+        return componentToString(name);
+    }
+
+    private @Nullable Unit getDisplayUnitFromStatistic(Statistic statistic) {
+        Unit.Type unitType = Unit.getTypeFromStatistic(statistic);
+        return switch (unitType) {
+            case UNTYPED, TIME -> null;
+            case DISTANCE -> config.distanceUnit;
+            case DAMAGE -> config.damageUnit;
         };
     }
 
     private boolean isNotTooBig(Unit bigUnit) {
-        return switch (maxTimeUnit) {
+        return switch (config.maxTimeUnit) {
             case DAY -> true;
             case HOUR -> bigUnit != Unit.DAY;
             case MINUTE -> !(bigUnit == Unit.HOUR || bigUnit == Unit.DAY);
@@ -376,7 +425,11 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
     }
 
     private String processingMessage() {
-        TextComponent msg = (TextComponent) MiniMessage.miniMessage().deserialize("<#ADE7FF>Processing...");
+        TextColor color = config.processingMsgColor;
+        if (color == null) {
+            return "Processing...";
+        }
+        TextComponent msg = Component.text("Processing...").color(color);
         return componentToString(msg);
     }
 }

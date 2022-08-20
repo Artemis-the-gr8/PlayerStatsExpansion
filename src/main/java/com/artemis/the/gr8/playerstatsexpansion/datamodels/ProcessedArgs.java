@@ -15,12 +15,14 @@ import java.util.regex.Pattern;
 public final class ProcessedArgs {
 
     private final static Pattern targetPattern;
+    private final static Pattern targetTitlePattern;
     private final static Pattern targetTopArgPattern;
     private final static Pattern targetPlayerArgPattern;
 
     private boolean isTitleRequest;
     private boolean isNumberRequest;
-    private boolean formatNumber = true;
+    private boolean numberRequestIsRaw;
+    private boolean isPlayerNameRequest;
 
     private Target target;
     private int topListSize;
@@ -29,12 +31,16 @@ public final class ProcessedArgs {
     private final String[] statIdentifiers;
 
     static {
-        targetPattern = Pattern.compile("(top:)|(player:)|(server)");
+        targetPattern = Pattern.compile("(title)|(top:)|(player:)|(server)");
+        targetTitlePattern = Pattern.compile("(title):?(\\d+)?");
         targetTopArgPattern = Pattern.compile("(?<=:)\\d+");
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
     }
 
-//    (title(:n)),   (number(:raw)),   top:n,                 stat_name(:sub_stat_name)
+//    (title(:n)),   (number(:raw)),                    top:n,                 stat_name(:sub_stat_name)
+//    (title(:n)),   (only:number(_raw)|player_name),   top:n,                 stat_name(:sub_stat_name)
+
+
 //    (title(:n)),   (number(:raw)),   player:player_name,    stat_name(:sub_stat_name)
 //    (title(:n)),   (number(:raw)),   server,                stat_name(:sub_stat_name)
     public ProcessedArgs(String args) {
@@ -52,8 +58,12 @@ public final class ProcessedArgs {
         return isNumberRequest;
     }
 
-    public boolean shouldFormatNumber() {
-        return formatNumber;
+    public boolean getRawNumber() {
+        return numberRequestIsRaw;
+    }
+
+    public boolean getPlayerNameOnly() {
+        return isPlayerNameRequest;
     }
 
     public Target target() {
@@ -109,38 +119,22 @@ public final class ProcessedArgs {
     }
 
     private String[] extractAllKeywords(String[] argsToProcess) {
-        String[] step1 = extractTitleKeyword(argsToProcess);
-        String[] step2 = extractNumberKeywords(step1);
-        return extractTargetAndTargetArgs(step2);
+        String[] step1 = extractOptionalKeywords(argsToProcess);
+        return extractTargetAndTargetArgs(step1);
     }
 
-    private String[] extractTitleKeyword(@NotNull String[] argsToProcess) {
+    private String[] extractOptionalKeywords(@NotNull String[] argsToProcess) {
         for (String arg : argsToProcess) {
-            if (arg.contains("title")) {
-                target = Target.TOP;
-                if (arg.equalsIgnoreCase("title")) {
-                    isTitleRequest = true;
-                } else if (arg.startsWith("title:")) {
-                    isTitleRequest = true;
-                    topListSize = findTopListSize(arg);
+            if (arg.contains("only:")) {
+                if (arg.startsWith("only:number")) {
+                    isNumberRequest = true;
                 }
-                return Arrays.stream(argsToProcess)
-                        .parallel()
-                        .filter(string -> !(string.equalsIgnoreCase(arg)))
-                        .toArray(String[]::new);
-            }
-        }
-        return argsToProcess;
-    }
+                if (arg.equalsIgnoreCase("only:number_raw")) {
+                    numberRequestIsRaw = true;
+                }
 
-    private String[] extractNumberKeywords(@NotNull String[] argsToProcess) {
-        for (String arg : argsToProcess) {
-            if (arg.contains("number")) {
-                if (arg.equalsIgnoreCase("number")) {
-                    isNumberRequest = true;
-                } else if (arg.equalsIgnoreCase("number:raw")) {
-                    isNumberRequest = true;
-                    formatNumber = false;
+                else if (arg.startsWith("only:player")) {
+                    isPlayerNameRequest = true;
                 }
                 return Arrays.stream(argsToProcess)
                         .parallel()
@@ -163,6 +157,10 @@ public final class ProcessedArgs {
                     target = Target.PLAYER;
                     playerName = findPlayerName(arg);
                 }
+                else if (targetTitlePattern.matcher(arg).find()) {
+                    isTitleRequest = true;
+                    topListSize = silentlyFindTopListSize(arg);
+                }
                 else {
                     target = Target.SERVER;
                 }
@@ -176,6 +174,15 @@ public final class ProcessedArgs {
     }
 
     private int findTopListSize(String targetArg) {
+        int topListSize = silentlyFindTopListSize(targetArg);
+        if (topListSize == 0) {
+            MyLogger.logWarning("No valid line-number found for top-selection!");
+            return 1;
+        }
+        return topListSize;
+    }
+
+    private int silentlyFindTopListSize(String targetArg) {
         Matcher matcher = targetTopArgPattern.matcher(targetArg);
         if (matcher.find()) {
             try {
@@ -187,8 +194,7 @@ public final class ProcessedArgs {
                 MyLogger.logWarning("Unexpected Exception! " + ex);
             }
         }
-        MyLogger.logWarning("No valid line-number found for top-selection!");
-        return 1;
+        return 0;
     }
 
     private String findPlayerName(String playerNameArg) {

@@ -1,6 +1,7 @@
 package com.artemis.the.gr8.playerstatsexpansion.cache;
 
 import com.artemis.the.gr8.playerstats.enums.Unit;
+import com.artemis.the.gr8.playerstatsexpansion.Config;
 import com.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
 import com.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
 import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
@@ -18,11 +19,13 @@ public final class StatCache {
 
     private volatile static StatCache instance;
 
+    private static Config config;
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> storedStatResults;
     private final ConcurrentHashMap<StatType, Instant> lastUpdatedTimestamps;
     private final ConcurrentLinkedQueue<OfflinePlayer> onlinePlayers;
 
     private StatCache() {
+        config = PlayerStatsExpansion.getConfig();
         storedStatResults = new ConcurrentHashMap<>();
         lastUpdatedTimestamps = new ConcurrentHashMap<>();
         onlinePlayers = new ConcurrentLinkedQueue<>();
@@ -58,8 +61,8 @@ public final class StatCache {
         boolean update = false;
         if (needsManualUpdating(statType)) {
             double updateInterval = (unitType == Unit.Type.DISTANCE) ?
-                    PlayerStatsExpansion.getDistanceUpdateSetting() :
-                    PlayerStatsExpansion.getTimeUpdateSetting();
+                    config.getDistanceUpdateSetting() :
+                    config.getTimeUpdateSetting();
 
             long secondsBetween = lastUpdatedTimestamps.get(statType).until(Instant.now(), ChronoUnit.SECONDS);
             update = secondsBetween > updateInterval;
