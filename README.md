@@ -31,8 +31,10 @@ The expansion won't work without PlayerStats **version 1.7**, which is not on Sp
 ## Keywords
 
 The available keywords are:
-- `number` - an optional keyword signalling that only the stat-number should be displayed, without the other information. 
-- `number:raw` - if the arg raw is included, the number will be stripped of any formatting and color.
+- `only:x` - an optional keyword signalling that only a part of the should be displayed, without the other information. The options are:
+    - `only:number` - get only the statistic number, with the formatting as specified in the PlaceholderAPI config
+    - `only:number_raw` - get only the statistic number, stripped of any formatting and color.
+    - `only:player_name` - get the name of the player that is on this position of the top-list
 - **selection**: 
     - `top: n` - get a single line from a top-statistic-list
     - `player: player-name` - get a player-statistic 
@@ -51,8 +53,8 @@ So, valid placeholders could look like this:
 * %playerstats_ server, animals_bred%
 * %playerstats_ title: 3, cake_slices_eaten%
 * %playerstats_ top: 5, deaths%
-* %playerstats_ number, player: Artemis_the_gr8, mine_block: diorite%
-* %playerstats_ number: raw, player: Artemis_the_gr8, break_item: diamond_sword%
+* %playerstats_ only:number, player: Artemis_the_gr8, mine_block: diorite%
+* %playerstats_ only:player_name, player: Artemis_the_gr8, break_item: diamond_sword%
 ```
 
 &nbsp;
@@ -92,7 +94,7 @@ In this example, you can see that the statistic does not have a sub-statistic, s
 %playerstats_ player: player-name, stat_name: sub_stat_name%  
 
 # Example:
-%playerstats_ player:Artemis_the_gr8, jump%
+%playerstats_ player: Artemis_the_gr8, jump%
 ```
 
 ![player](src/main/resources/images/placeholder_player.png)
