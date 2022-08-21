@@ -10,7 +10,7 @@ On this page, you'll find an explanation of how to use the placeholders, includi
 
 ## Important Note about Usage
 
-The expansion won't work without PlayerStats **version 1.7**, which is not on Spigot or CurseForge yet, but you can already download it from the PlayerStats [GitHub](https://github.com/itHotL/PlayerStats/releases/tag/v1.7)!
+The expansion won't work without PlayerStats **version 1.7** or higher, which is not on Spigot or CurseForge yet, but you can already download it from the PlayerStats [GitHub](https://github.com/itHotL/PlayerStats/releases)!
 
 ----
 
@@ -31,23 +31,23 @@ The expansion won't work without PlayerStats **version 1.7**, which is not on Sp
 ## Keywords
 
 The available keywords are:
-- `only:x` - an optional keyword signalling that only a part of the should be displayed, without the other information. The options are:
+- `only: <arg>` - an optional keyword signalling that only a part of the stat-lookup should be displayed, without the other information. The options are:
     - `only:number` - get only the statistic number, with the formatting as specified in the PlaceholderAPI config
     - `only:number_raw` - get only the statistic number, stripped of any formatting and color.
-    - `only:player_name` - get the name of the player that is on this position of the top-list
+    - `only:player_name` - get the name of the player that is on this position of the top-list, with the color as specified in the PlaceholderAPI config
 - **selection**: 
-    - `top: n` - get a single line from a top-statistic-list
-    - `player: player-name` - get a player-statistic 
+    - `top: <n>` - get a single line from a top-statistic-list
+    - `player: <player-name>` - get a player-statistic 
     - `server` - get a server-statistic
     - `title` - get a pretty name for a statistic
-        - `title: n` - get a pretty name for a top-n-statistic list
+        - `title: <n>` - get a pretty name for a top-n-statistic list
 - **statistic**: 
     - `name: sub-name` - see [Statistic Choices](#statistic-choices) for more information
 
 &nbsp;
 
 **Important: a keyword for selection and statistic must always be included!**  
-So, valid placeholders could look like this: 
+So, some examples of valid placeholders would be: 
 
 ```
 * %playerstats_ server, animals_bred%
@@ -160,7 +160,7 @@ These statistics can be divided into two types: **general** ones, and ones that 
 [item](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html) or 
 [entity](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/entity/EntityType.html) as **sub-statistic**.
   
-The stat_names are the same as they are for PlayerStats' `/stat` command, so you can always check with PlayerStats' tab-complete function to verify.
+The stat_names and sub_stat_names are the same as they are for PlayerStats' `/stat` command, so you can always check with PlayerStats' tab-complete function to verify.
 
   
 #### All Supported Statistics:
