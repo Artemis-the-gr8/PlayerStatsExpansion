@@ -2,17 +2,16 @@
 
 Adds placeholders for [PlayerStats](https://www.spigotmc.org/resources/playerstats.102347/)!  
 
-On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](#full-example). 
+On this page, you'll find an explanation of how to use the placeholders, including some detailed [examples](#full-example).  
+For FAQ, also see the [Wiki](https://github.com/Artemis-the-gr8/PlayerStatsExpansion/wiki).
 
 &nbsp;
 
-----
 
 ## Important Note about Usage
 
-The expansion won't work without PlayerStats **version 1.7 or higher**, which is not on Spigot or CurseForge yet, but you can already download it from the PlayerStats [GitHub](https://github.com/itHotL/PlayerStats/releases)!
+For the placeholders to work, you need PlayerStats **version 1.7 or higher**!
 
-----
 
 &nbsp;
 
