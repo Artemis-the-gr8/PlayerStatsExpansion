@@ -10,7 +10,7 @@ On this page, you'll find an explanation of how to use the placeholders, includi
 
 ## Important Note about Usage
 
-The expansion won't work without PlayerStats **version 1.7** or higher, which is not on Spigot or CurseForge yet, but you can already download it from the PlayerStats [GitHub](https://github.com/itHotL/PlayerStats/releases)!
+The expansion won't work without PlayerStats **version 1.7 or higher**, which is not on Spigot or CurseForge yet, but you can already download it from the PlayerStats [GitHub](https://github.com/itHotL/PlayerStats/releases)!
 
 ----
 
