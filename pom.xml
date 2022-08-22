@@ -6,7 +6,7 @@
 
     <groupId>io.github.ithotl</groupId>
     <artifactId>PlayerStatsExpansion</artifactId>
-    <version>1.1.1</version>
+    <version>1.2.0</version>
     <name>PlayerStatsExpansion</name>
     <description>Adds placeholders for PlayerStats</description>
 
@@ -41,10 +41,10 @@
             <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
         </repository>
 
-        <repository>
-            <id>sonatype-oss-snapshots1</id> <!-- the OSSRH repository for snapshots -->
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
-        </repository>
+<!--        <repository>-->
+<!--            <id>sonatype-oss-snapshots1</id> &lt;!&ndash; the OSSRH repository for snapshots &ndash;&gt;-->
+<!--            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>-->
+<!--        </repository>-->
     </repositories>
 
     <dependencies>
@@ -65,7 +65,7 @@
         <dependency>
             <groupId>io.github.ithotl</groupId>
             <artifactId>PlayerStats</artifactId>
-            <version>1.7.2-SNAPSHOT</version>
+            <version>1.7.2</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -1,13 +1,13 @@
 package com.artemis.the.gr8.playerstatsexpansion;
 
-import com.artemis.the.gr8.lib.kyori.adventure.text.Component;
-import com.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
-import com.artemis.the.gr8.lib.kyori.adventure.text.format.TextColor;
-import com.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstats.api.ApiFormatter;
 import com.artemis.the.gr8.playerstats.api.PlayerStats;
 import com.artemis.the.gr8.playerstats.api.StatManager;
 import com.artemis.the.gr8.playerstats.enums.Unit;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.Component;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.TextComponent;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.format.TextColor;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
 import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.artemis.the.gr8.playerstats.statistic.result.StatResult;
@@ -36,6 +36,7 @@ import java.util.concurrent.*;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
+    private final String requiredPlayerStatsVersion = "1.8";
     private static ApiFormatter statFormatter;
     private static PlayerStatsExpansion instance;
     private static Config config;
@@ -58,7 +59,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public @NotNull String getVersion() {
-        return "1.1.1";
+        return "1.2.0";
     }
 
     @Override
@@ -95,8 +96,21 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         PlayerStats playerStats;
         try {
             playerStats = PlayerStats.getAPI();
+            playerStats.getClass().getMethod("getVersion");
+            if (!playerStats.getVersion().equalsIgnoreCase(requiredPlayerStatsVersion)) {
+                MyLogger.logWarning(
+                        "To use the PlayerStatsExpansion"  +
+                        " you need PlayerStats version " + requiredPlayerStatsVersion +
+                        "! Download the latest version at: https://www.spigotmc.org/resources/playerstats.102347/");
+                return false;
+            }
         } catch (IllegalStateException e) {
             MyLogger.logWarning("Unable to connect to PlayerStats' API!");
+            return false;
+        }  catch (NoSuchMethodException e) {
+            MyLogger.logWarning(
+                    "To use the PlayerStatsExpansion, you need PlayerStats v1.7 or higher! " +
+                    "Download the latest version at: https://www.spigotmc.org/resources/playerstats.102347/");
             return false;
         }
         StatManager statManager = playerStats.getStatManager();
