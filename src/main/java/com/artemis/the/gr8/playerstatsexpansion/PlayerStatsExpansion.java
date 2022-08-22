@@ -22,6 +22,7 @@ import me.clip.placeholderapi.expansion.Cacheable;
 import me.clip.placeholderapi.expansion.Configurable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.event.HandlerList;
@@ -57,7 +58,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public @NotNull String getVersion() {
-        return "1.1.0";
+        return "1.1.1";
     }
 
     @Override
@@ -275,6 +276,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         }
         else if (args.getPlayerNameOnly()) {
             String playerName = linkedResult.getKeyAtIndex(lineNumber-1);
+            if (playerName == null) {
+                return ChatColor.DARK_GRAY + "-";
+            }
             return getColoredPlayerName(playerName);
         }
         return getSingleFormattedTopStatLine(linkedResult, args.topListSize(), statType.statistic());
@@ -329,6 +333,9 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
         String playerName = topStats.getKeyAtIndex(lineNumber-1);
+        if (playerName == null) {
+            return ChatColor.DARK_GRAY + "-";
+        }
         long statNumber = topStats.get(playerName);
 
         TextComponent result;

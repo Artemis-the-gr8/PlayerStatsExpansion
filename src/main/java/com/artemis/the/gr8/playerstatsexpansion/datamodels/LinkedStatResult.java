@@ -1,5 +1,7 @@
 package com.artemis.the.gr8.playerstatsexpansion.datamodels;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -31,16 +33,25 @@ public final class LinkedStatResult {
     }
 
     public Integer get(String key) {
-        return statResult.get(key);
+        if (statResult.containsKey(key)) {
+            return statResult.get(key);
+        }
+        return 0;
     }
 
     public Integer getValueAtIndex(int index) {
         String[] playerNames = statResult.keySet().toArray(new String[0]);
+        if (playerNames.length <= index) {
+            return 0;
+        }
         return statResult.get(playerNames[index]);
     }
 
-    public String getKeyAtIndex(int index) {
+    public @Nullable String getKeyAtIndex(int index) {
         String[] playerNames = statResult.keySet().toArray(new String[0]);
+        if (playerNames.length <= index) {
+            return null;
+        }
         return playerNames[index];
     }
 
