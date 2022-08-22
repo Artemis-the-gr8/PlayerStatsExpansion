@@ -126,9 +126,10 @@ To include "Top x" before the stat-name, include a number after the `title` sele
 
 # Example:
 %playerstats_ title:3, damage_dealt%
+%playerstats_title, damage_dealt%
 ```  
 
-![title_top](src/main/resources/images/placeholder_title_top.png)
+![title_top](src/main/resources/images/placeholder_title_top.png)  
 ![title](src/main/resources/images/placeholder_title.png)
 
 &nbsp;
