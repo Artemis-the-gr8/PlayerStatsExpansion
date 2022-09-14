@@ -19,6 +19,12 @@ public final class MyLogger {
         }
     }
 
+    public static void playerStatsVersionWarning(String version) {
+        myLogger.warning("This version of the PlayerStatsExpansion needs at least v" +
+                version + " of PlayerStats! " +
+                "Download the latest version here: https://www.spigotmc.org/resources/playerstats.102347/");
+    }
+
     public static void clear() {
         loggedMessages.clear();
     }
