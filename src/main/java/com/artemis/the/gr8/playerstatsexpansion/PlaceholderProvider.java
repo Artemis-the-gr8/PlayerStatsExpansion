@@ -38,7 +38,7 @@ public class PlaceholderProvider {
     private StatListener statListener;
     private JoinAndQuitListener joinAndQuitListener;
 
-    public PlaceholderProvider(PlayerStats playerStats) {
+    public PlaceholderProvider(@NotNull PlayerStats playerStats) {
         StatManager statManager = playerStats.getStatManager();
         statFormatter = playerStats.getFormatter();
 
@@ -94,7 +94,7 @@ public class PlaceholderProvider {
         };
     }
 
-    private String getTitle(ProcessedArgs args) {
+    private @Nullable String getTitle(@NotNull ProcessedArgs args) {
         Statistic stat = args.getStatistic();
         if (stat == null) {
             return null;
@@ -206,7 +206,7 @@ public class PlaceholderProvider {
         }
     }
 
-    private void saveToCache(StatRequest<?> statRequest) {
+    private void saveToCache(@NotNull StatRequest<?> statRequest) {
         MyLogger.logInfo("Storing " + statRequest.getStatisticSetting() + " in the cache...");
         StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
@@ -218,7 +218,7 @@ public class PlaceholderProvider {
         statCache.add(statType, future);
     }
 
-    private String getFormattedPlayerStatResult(int statNumber, String playerName, StatType statType) {
+    private String getFormattedPlayerStatResult(int statNumber, String playerName, @NotNull StatType statType) {
         Statistic statistic = statType.statistic();
 
         TextComponent result;
@@ -239,7 +239,7 @@ public class PlaceholderProvider {
         return componentToString(result);
     }
 
-    private String getSingleFormattedTopStatLine (LinkedStatResult topStats, int lineNumber, Statistic statistic) {
+    private String getSingleFormattedTopStatLine (@NotNull LinkedStatResult topStats, int lineNumber, Statistic statistic) {
         String playerName = topStats.getKeyAtIndex(lineNumber-1);
         if (playerName == null) {
             return ChatColor.DARK_GRAY + "-";
@@ -258,7 +258,7 @@ public class PlaceholderProvider {
         return componentToString(result);
     }
 
-    private String getFormattedServerStatResult(long statNumber, StatType statType) {
+    private String getFormattedServerStatResult(long statNumber, @NotNull StatType statType) {
         Statistic statistic = statType.statistic();
 
         TextComponent result;
@@ -279,7 +279,7 @@ public class PlaceholderProvider {
         return componentToString(result);
     }
 
-    private String getFormattedNumber(long statNumber, StatType statType) {
+    private String getFormattedNumber(long statNumber, @NotNull StatType statType) {
         NumberFormatter numberFormatter = statFormatter.getNumberFormatter();
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
 
