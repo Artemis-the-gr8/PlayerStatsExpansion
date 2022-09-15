@@ -1,8 +1,8 @@
 package com.artemis.the.gr8.playerstatsexpansion;
 
+import com.artemis.the.gr8.lib.kyori.adventure.text.format.NamedTextColor;
+import com.artemis.the.gr8.lib.kyori.adventure.text.format.TextColor;
 import com.artemis.the.gr8.playerstats.enums.Unit;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.format.NamedTextColor;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.format.TextColor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;

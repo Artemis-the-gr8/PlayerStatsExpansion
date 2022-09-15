@@ -1,13 +1,13 @@
 package com.artemis.the.gr8.playerstatsexpansion;
 
+import com.artemis.the.gr8.lib.kyori.adventure.text.Component;
+import com.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
+import com.artemis.the.gr8.lib.kyori.adventure.text.format.TextColor;
+import com.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstats.api.ApiFormatter;
 import com.artemis.the.gr8.playerstats.api.PlayerStats;
 import com.artemis.the.gr8.playerstats.api.StatManager;
 import com.artemis.the.gr8.playerstats.enums.Unit;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.Component;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.TextComponent;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.format.TextColor;
-import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
 import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
 import com.artemis.the.gr8.playerstats.statistic.result.StatResult;
