@@ -37,14 +37,12 @@ public final class ProcessedArgs {
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
     }
 
-//    (title(:n)),   (number(:raw)),                    top:n,                 stat_name(:sub_stat_name)
-//    (title(:n)),   (only:number(_raw)|player_name),   top:n,                 stat_name(:sub_stat_name)
-
-
-//    (title(:n)),   (number(:raw)),   player:player_name,    stat_name(:sub_stat_name)
-//    (title(:n)),   (number(:raw)),   server,                stat_name(:sub_stat_name)
-    public ProcessedArgs(String args) {
-        String[] argsToProcess = args.split(",");
+//    (title(:n)),   (only: <number(_raw)|player_name)>,   top: <n>,  stat_name(:sub_stat_name)
+//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
+//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
+//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
+    public ProcessedArgs(String args) throws IllegalArgumentException {
+        String[] argsToProcess = splitAroundCommas(args);
         String[] whiteSpaceStrippedArgs = stripWhiteSpaces(argsToProcess);
         String[] leftoverArgs = extractAllKeywords(whiteSpaceStrippedArgs);
         statIdentifiers = leftoverArgs[0].split(":");
@@ -111,6 +109,14 @@ public final class ProcessedArgs {
         return statIdentifiers[1];
     }
 
+    private String[] splitAroundCommas(String argsToProcess) throws IllegalArgumentException {
+        if (!argsToProcess.contains(",")) {
+            MyLogger.logWarning("Arguments need to be separated by commas!");
+            throw new IllegalArgumentException();
+        }
+        return argsToProcess.split(",");
+    }
+
     private String[] stripWhiteSpaces(String[] argsToProcess) {
         return Arrays.stream(argsToProcess)
                 .parallel()
@@ -119,8 +125,8 @@ public final class ProcessedArgs {
     }
 
     private String[] extractAllKeywords(String[] argsToProcess) {
-        String[] step1 = extractOptionalKeywords(argsToProcess);
-        return extractTargetAndTargetArgs(step1);
+        String[] argsToProcessMinusOptionalKeywords = extractOptionalKeywords(argsToProcess);
+        return extractTargetAndTargetArgs(argsToProcessMinusOptionalKeywords);
     }
 
     private String[] extractOptionalKeywords(@NotNull String[] argsToProcess) {

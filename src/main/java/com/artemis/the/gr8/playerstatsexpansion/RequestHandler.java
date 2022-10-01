@@ -36,7 +36,7 @@ public final class RequestHandler {
         return createRequest(requestGenerator, processedArgs);
     }
 
-    public @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(ProcessedArgs processedArgs) {
+    public @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(@NotNull ProcessedArgs processedArgs) {
         int topListSize = processedArgs.topListSize();
 
         RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
@@ -71,10 +71,10 @@ public final class RequestHandler {
         };
     }
 
-    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, ProcessedArgs processedArgs) {
+    private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, @NotNull ProcessedArgs processedArgs) {
         Statistic stat = processedArgs.getStatistic();
         if (stat == null) {
-            MyLogger.logWarning("missing or invalid Statistic");
+            MyLogger.logWarning("missing or invalid statistic");
             return null;
         }
 
