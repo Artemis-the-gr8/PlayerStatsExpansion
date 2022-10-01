@@ -74,7 +74,7 @@ public final class RequestHandler {
     private @Nullable <T> StatRequest<T> createRequest(RequestGenerator<T> requestGenerator, @NotNull ProcessedArgs processedArgs) {
         Statistic stat = processedArgs.getStatistic();
         if (stat == null) {
-            MyLogger.logWarning("missing or invalid Statistic");
+            MyLogger.logWarning("missing or invalid statistic");
             return null;
         }
 

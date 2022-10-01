@@ -78,7 +78,13 @@ public class PlaceholderProvider {
     }
 
     private @Nullable String getStatResult(String args) {
-        ProcessedArgs processedArgs = new ProcessedArgs(args);
+        ProcessedArgs processedArgs;
+        try {
+            processedArgs = new ProcessedArgs(args);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+
         if (processedArgs.getTitleOnly()) {
             return getTitle(processedArgs);
         }
