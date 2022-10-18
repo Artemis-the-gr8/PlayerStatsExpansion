@@ -6,6 +6,7 @@ import me.clip.placeholderapi.expansion.Configurable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,8 +16,8 @@ import java.util.Map;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    private final String requiredPlayerStatsVersion = "1.8";
-
+    final static String expansionVersion = "1.2.0";
+    final static String matchingPlayerStatsVersion = "1.7.2";
     private static PlayerStatsExpansion instance;
     private static Config config;
     private PlaceholderProvider placeholderProvider;
@@ -33,7 +34,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public @NotNull String getVersion() {
-        return "1.2.0";
+        return expansionVersion;
     }
 
     @Override
@@ -64,7 +65,15 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public boolean canRegister() {
-        return Bukkit.getPluginManager().isPluginEnabled("PlayerStats");
+        Plugin plugin = Bukkit.getPluginManager().getPlugin("PlayerStats");
+        if (plugin != null) {
+            String version = plugin.getDescription().getVersion();
+            if (version.equalsIgnoreCase(matchingPlayerStatsVersion)) {
+                return true;
+            }
+        }
+        MyLogger.playerStatsVersionError();
+        return false;
     }
 
     @Override
@@ -76,13 +85,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         PlayerStats playerStats;
         try {
             playerStats = PlayerStats.getAPI();
-            playerStats.getClass().getMethod("getVersion");
-            if (!playerStats.getVersion().equalsIgnoreCase(requiredPlayerStatsVersion)) {
-                MyLogger.playerStatsVersionWarning(requiredPlayerStatsVersion);
-                return false;
-            }
-        } catch (IllegalStateException | NoClassDefFoundError | NoSuchMethodException e) {
-            MyLogger.playerStatsVersionWarning(requiredPlayerStatsVersion);
+        } catch (IllegalStateException | NoClassDefFoundError e) {
             return false;
         }
 

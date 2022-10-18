@@ -71,8 +71,14 @@ public class PlaceholderProvider {
         }
         try {
             return getStatResult(args);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception | Error e) {
+            MyLogger.logWarning("An error has occurred! " +
+                    "To fix it, first make sure you are using version " + PlayerStatsExpansion.matchingPlayerStatsVersion + " of PlayerStats, " +
+                    "which can be found here: https://www.spigotmc.org/resources/playerstats.102347/ " +
+                    "\n" + "If the error persists, create an issue on the PlayerStatsExpansion GitHub." +
+                    "\n" +
+                    "\n" + e);
+
             return null;
         }
     }
