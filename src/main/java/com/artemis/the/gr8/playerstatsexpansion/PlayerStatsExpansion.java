@@ -16,8 +16,8 @@ import java.util.Map;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    final static String expansionVersion = "1.2.0";
-    final static String matchingPlayerStatsVersion = "1.7.2";
+    final static String expansionVersion = "2.0.0";
+    final static String matchingPlayerStatsVersion = "2.0";
     private static PlayerStatsExpansion instance;
     private static Config config;
     private PlaceholderProvider placeholderProvider;

@@ -1,6 +1,6 @@
 package com.artemis.the.gr8.playerstatsexpansion.datamodels;
 
-import com.artemis.the.gr8.playerstats.enums.Target;
+import com.artemis.the.gr8.playerstats.api.enums.Target;
 import com.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
