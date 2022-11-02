@@ -6,7 +6,7 @@
 
     <groupId>io.github.ithotl</groupId>
     <artifactId>PlayerStatsExpansion</artifactId>
-    <version>1.2.0</version>
+    <version>2.0.0-SNAPSHOT</version>
     <name>PlayerStatsExpansion</name>
     <description>Adds placeholders for PlayerStats</description>
 
@@ -65,7 +65,7 @@
         <dependency>
             <groupId>io.github.ithotl</groupId>
             <artifactId>PlayerStats</artifactId>
-            <version>1.7.2-SNAPSHOT</version>
+            <version>2.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

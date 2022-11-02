@@ -1,6 +1,6 @@
 package com.artemis.the.gr8.playerstatsexpansion.cache;
 
-import com.artemis.the.gr8.playerstats.enums.Unit;
+import com.artemis.the.gr8.playerstats.api.enums.Unit;
 import com.artemis.the.gr8.playerstatsexpansion.Config;
 import com.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
 import com.artemis.the.gr8.playerstatsexpansion.datamodels.LinkedStatResult;
