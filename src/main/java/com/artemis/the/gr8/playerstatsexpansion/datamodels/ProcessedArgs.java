@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -78,7 +79,7 @@ public final class ProcessedArgs {
 
     public @Nullable Statistic getStatistic() {
         try {
-            return Statistic.valueOf(statIdentifiers[0].toUpperCase());
+            return Statistic.valueOf(statIdentifiers[0].toUpperCase(Locale.ENGLISH));
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -96,7 +97,7 @@ public final class ProcessedArgs {
             return null;
         }
         try {
-            return EntityType.valueOf(statIdentifiers[1].toUpperCase());
+            return EntityType.valueOf(statIdentifiers[1].toUpperCase(Locale.ENGLISH));
         } catch (IllegalArgumentException e) {
             return null;
         }
