@@ -72,9 +72,8 @@ public class PlaceholderProvider {
         } catch (Exception | Error e) {
             MyLogger.logWarning(e +
                     "\n" +
-                    "\n" +
-                    "Make sure you are using PlayerStats v" + PlayerStatsExpansion.matchingPlayerStatsVersion + ", " +
-                    "\n" + "and if the error persists, create an issue on the PlayerStatsExpansion GitHub.");
+                    "Make sure you are using PlayerStats v" + PlayerStatsExpansion.matchingPlayerStatsVersion + "! " +
+                    "If the error persists, create an issue on the PlayerStatsExpansion GitHub.");
             return null;
         }
     }
@@ -122,6 +121,9 @@ public class PlaceholderProvider {
         StatRequest<Integer> playerRequest = requestHandler.getPlayerRequest(args);
         if (playerRequest == null) {
             return null;
+        }
+        else if (!playerRequest.isValid()) {
+            return ChatColor.DARK_GRAY + "-";
         }
         updateCache(playerRequest);
 
