@@ -37,6 +37,7 @@ The available keywords are:
 - **selection**: 
     - `top: <n>` - get a single line from a top-statistic-list
     - `player: <player-name>` - get a player-statistic 
+    - `me` - get your own statistic
     - `server` - get a server-statistic
     - `title` - get a pretty name for a statistic
         - `title: <n>` - get a pretty name for a top-n-statistic list
@@ -52,6 +53,7 @@ So, some examples of valid placeholders would be:
 * %playerstats_ server, animals_bred%
 * %playerstats_ title: 3, cake_slices_eaten%
 * %playerstats_ top: 5, deaths%
+* %playerstats_ me, jump%
 * %playerstats_ only:number, player: Artemis_the_gr8, mine_block: diorite%
 * %playerstats_ only:player_name, player: Artemis_the_gr8, break_item: diamond_sword%
 ```
