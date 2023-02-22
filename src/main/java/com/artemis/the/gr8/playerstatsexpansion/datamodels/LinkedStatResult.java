@@ -14,6 +14,7 @@ public final class LinkedStatResult {
     }
 
     public void insertValueIntoExistingOrder(String playerName, Integer statNumber) {
+        //TODO split this up in different methods for adding a new player to the list and updating an existing one
         statResult.put(playerName, statNumber);
         List<String> playerNames = statResult.keySet().stream().toList();
         int index = playerNames.indexOf(playerName);

@@ -15,6 +15,7 @@ import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -54,7 +55,7 @@ public class PlaceholderProvider {
         unregisterListeners();
     }
 
-    public String onRequest(String args) {
+    public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
             case "prefix" -> statFormatter.getPluginPrefix();
             case "rainbowprefix" -> statFormatter.getRainbowPluginPrefix();
@@ -68,7 +69,7 @@ public class PlaceholderProvider {
             return componentToString(prefix);
         }
         try {
-            return getStatResult(args);
+            return getStatResult(player, args);
         } catch (Exception | Error e) {
             MyLogger.logWarning(e +
                     "\n" +
@@ -78,10 +79,10 @@ public class PlaceholderProvider {
         }
     }
 
-    private @Nullable String getStatResult(String args) {
+    private @Nullable String getStatResult(OfflinePlayer player, String args) {
         ProcessedArgs processedArgs;
         try {
-            processedArgs = new ProcessedArgs(args);
+            processedArgs = new ProcessedArgs(player, args);
         } catch (IllegalArgumentException e) {
             return null;
         }

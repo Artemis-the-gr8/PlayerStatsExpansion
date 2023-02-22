@@ -3,6 +3,7 @@ package com.artemis.the.gr8.playerstatsexpansion.datamodels;
 import com.artemis.the.gr8.playerstats.api.enums.Target;
 import com.artemis.the.gr8.playerstatsexpansion.MyLogger;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +33,7 @@ public final class ProcessedArgs {
     private final String[] statIdentifiers;
 
     static {
-        targetPattern = Pattern.compile("(title)|(top:)|(player:)|(server)");
+        targetPattern = Pattern.compile("(title)|(top:)|(player:)|(server)|(me)");
         targetTitlePattern = Pattern.compile("(title):?(\\d+)?");
         targetTopArgPattern = Pattern.compile("(?<=:)\\d+");
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
@@ -42,10 +43,10 @@ public final class ProcessedArgs {
 //    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
 //    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
 //    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
-    public ProcessedArgs(String args) throws IllegalArgumentException {
+    public ProcessedArgs(OfflinePlayer player, String args) throws IllegalArgumentException {
         String[] argsToProcess = splitAroundCommas(args);
         String[] whiteSpaceStrippedArgs = stripWhiteSpaces(argsToProcess);
-        String[] leftoverArgs = extractAllKeywords(whiteSpaceStrippedArgs);
+        String[] leftoverArgs = extractAllKeywords(player, whiteSpaceStrippedArgs);
         statIdentifiers = leftoverArgs[0].split(":");
     }
 
@@ -125,9 +126,9 @@ public final class ProcessedArgs {
                 .toArray(String[]::new);
     }
 
-    private String[] extractAllKeywords(String[] argsToProcess) {
+    private String[] extractAllKeywords(OfflinePlayer player, String[] argsToProcess) {
         String[] argsToProcessMinusOptionalKeywords = extractOptionalKeywords(argsToProcess);
-        return extractTargetAndTargetArgs(argsToProcessMinusOptionalKeywords);
+        return extractTargetAndTargetArgs(player, argsToProcessMinusOptionalKeywords);
     }
 
     private String[] extractOptionalKeywords(@NotNull String[] argsToProcess) {
@@ -152,7 +153,7 @@ public final class ProcessedArgs {
         return argsToProcess;
     }
 
-    private String[] extractTargetAndTargetArgs(@NotNull String[] argsToProcess) {
+    private String[] extractTargetAndTargetArgs(@Nullable OfflinePlayer player, @NotNull String[] argsToProcess) {
         for (String arg : argsToProcess) {
             Matcher matcher = targetPattern.matcher(arg);
             if (matcher.find()) {
@@ -167,6 +168,10 @@ public final class ProcessedArgs {
                 else if (targetTitlePattern.matcher(arg).find()) {
                     isTitleRequest = true;
                     topListSize = silentlyFindTopListSize(arg);
+                }
+                else if (arg.equalsIgnoreCase("me") && player != null) {
+                    target = Target.PLAYER;
+                    playerName = player.getName();
                 }
                 else {
                     target = Target.SERVER;

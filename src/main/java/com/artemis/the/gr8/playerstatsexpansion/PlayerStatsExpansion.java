@@ -114,6 +114,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (placeholderProvider == null) {
             return null;
         }
-        return placeholderProvider.onRequest(args);
+        return placeholderProvider.onRequest(player, args);
     }
 }
