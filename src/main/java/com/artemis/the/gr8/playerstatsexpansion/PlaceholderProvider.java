@@ -73,7 +73,7 @@ public class PlaceholderProvider {
         } catch (Exception | Error e) {
             MyLogger.logWarning(e +
                     "\n" +
-                    "Make sure you are using PlayerStats v" + PlayerStatsExpansion.matchingPlayerStatsVersion + "! " +
+                    "Make sure you are using PlayerStats v" + PlayerStatsExpansion.NEEDED_PLAYERSTATS_API_VERSION + "! " +
                     "If the error persists, create an issue on the PlayerStatsExpansion GitHub.");
             return null;
         }
