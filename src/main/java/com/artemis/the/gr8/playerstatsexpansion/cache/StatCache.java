@@ -1,5 +1,6 @@
 package com.artemis.the.gr8.playerstatsexpansion.cache;
 
+import com.artemis.the.gr8.playerstats.api.StatManager;
 import com.artemis.the.gr8.playerstats.api.enums.Unit;
 import com.artemis.the.gr8.playerstatsexpansion.Config;
 import com.artemis.the.gr8.playerstatsexpansion.PlayerStatsExpansion;
@@ -17,39 +18,30 @@ import java.util.concurrent.*;
 
 public final class StatCache {
 
-    private volatile static StatCache instance;
-
     private static Config config;
+    private final StatManager statManager;
+
     private final ConcurrentHashMap<StatType, CompletableFuture<LinkedStatResult>> storedStatResults;
     private final ConcurrentHashMap<StatType, Instant> lastUpdatedTimestamps;
-    private final ConcurrentLinkedQueue<OfflinePlayer> onlinePlayers;
+    private final ConcurrentLinkedQueue<OfflinePlayer> relevantOnlinePlayers;
 
-    private StatCache() {
+    public StatCache(StatManager statManager) {
         config = PlayerStatsExpansion.getConfig();
+        this.statManager = statManager;
+
         storedStatResults = new ConcurrentHashMap<>();
         lastUpdatedTimestamps = new ConcurrentHashMap<>();
-        onlinePlayers = new ConcurrentLinkedQueue<>();
+        relevantOnlinePlayers = new ConcurrentLinkedQueue<>();
 
-        onlinePlayers.addAll(Bukkit.getOnlinePlayers());
-    }
-
-    public static StatCache getInstance() {
-        StatCache localVariable = instance;
-        if (localVariable != null) {
-            return localVariable;
-        }
-        synchronized (StatCache.class) {
-            if (instance == null) {
-                instance = new StatCache();
-            }
-            return instance;
-        }
+        relevantOnlinePlayers.addAll(Bukkit.getOnlinePlayers()
+                .stream().filter(player -> !statManager.isExcludedPlayer(player.getName()))
+                .toList());
     }
 
     public void clear() {
         storedStatResults.clear();
         lastUpdatedTimestamps.clear();
-        onlinePlayers.clear();
+        relevantOnlinePlayers.clear();
     }
 
     public boolean hasRecordOf(StatType statType) {
@@ -89,12 +81,16 @@ public final class StatCache {
     }
 
     public void addOnlinePlayer(OfflinePlayer player) {
-        onlinePlayers.add(player);
+        if (!statManager.isExcludedPlayer(player.getName())) {
+            relevantOnlinePlayers.add(player);
+        }
     }
 
     public void removeOnlinePlayer(OfflinePlayer player) {
-        onlinePlayers.remove(player);
-        updateAllForPlayer(player);
+        if (!statManager.isExcludedPlayer(player.getName())) {
+            relevantOnlinePlayers.remove(player);
+            updateAllForPlayer(player);
+        }
     }
 
     private void updateAllForPlayer(OfflinePlayer player) {
@@ -112,7 +108,7 @@ public final class StatCache {
     /** Update the CompletableFuture for this StatType in the cache with the provided values,
      either when this future has completed or immediately if it is already done.*/
     public void updateValue(StatType statType, String playerName, int newStatValue) {
-        if (storedStatResults.containsKey(statType)) {
+        if (!statManager.isExcludedPlayer(playerName) && storedStatResults.containsKey(statType)) {
             CompletableFuture<LinkedStatResult> future = storedStatResults.get(statType);
             future.thenApplyAsync(map -> {
                 map.insertValueIntoExistingOrder(playerName, newStatValue);
@@ -163,7 +159,7 @@ public final class StatCache {
 
         @Override
         public void run() {
-            onlinePlayers.stream().parallel().forEach(onlinePlayer -> {
+            relevantOnlinePlayers.stream().parallel().forEach(onlinePlayer -> {
                 int newStat = onlinePlayer.getStatistic(entry.getKey().statistic());
                 entry.getValue().thenApplyAsync(linkedResult -> {
                     linkedResult.insertValueIntoExistingOrder(onlinePlayer.getName(), newStat);

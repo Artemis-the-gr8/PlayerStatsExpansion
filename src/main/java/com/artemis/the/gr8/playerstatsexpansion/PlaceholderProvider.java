@@ -43,7 +43,7 @@ public class PlaceholderProvider {
 
         config = PlayerStatsExpansion.getConfig();
         requestHandler = new RequestHandler(statManager);
-        statCache = StatCache.getInstance();
+        statCache = new StatCache(statManager);
 
         registerListeners();
     }
@@ -126,17 +126,18 @@ public class PlaceholderProvider {
         else if (!playerRequest.isValid()) {
             return ChatColor.DARK_GRAY + "-";
         }
-        updateCache(playerRequest);
 
         StatType statType = StatType.fromRequest(playerRequest);
-        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         int stat;
-        if (linkedResult != null) {
-            stat = linkedResult.get(args.playerName());
+        if (statManager.isExcludedPlayer(args.playerName())) {
+            stat = statManager.executePlayerStatRequest(playerRequest).value();
         }
         else {
-            StatResult<Integer> result = statManager.executePlayerStatRequest(playerRequest);
-            stat = result.value();
+            updateCache(playerRequest);
+            LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+            stat = linkedResult != null ?
+                    linkedResult.get(args.playerName()) :
+                    statManager.executePlayerStatRequest(playerRequest).value();
         }
 
         if (args.getNumberOnly()) {
@@ -360,12 +361,12 @@ public class PlaceholderProvider {
 
     private void registerListeners() {
         if (statListener == null) {
-            statListener = new StatListener();
+            statListener = new StatListener(statCache);
             Bukkit.getPluginManager().registerEvents(
                     statListener, PlaceholderAPIPlugin.getInstance());
         }
         if (joinAndQuitListener == null) {
-            joinAndQuitListener = new JoinAndQuitListener();
+            joinAndQuitListener = new JoinAndQuitListener(statCache);
             Bukkit.getPluginManager().registerEvents(
                     joinAndQuitListener, PlaceholderAPIPlugin.getInstance());
         }
