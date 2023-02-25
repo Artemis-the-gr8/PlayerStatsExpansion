@@ -10,7 +10,13 @@ For FAQ, also see the [Wiki](https://github.com/Artemis-the-gr8/PlayerStatsExpan
 
 ## Important Note about Usage
 
-For the placeholders to work, you need PlayerStats **version 1.7.2**!
+For the placeholders to work, you need a **matching PlayerStats version**! 
+| Expansion | PlayerStats |
+| --------- | ----------- |
+|   2.0.0   | 2 or above  |
+|   1.2.0   | 1.7.2       |
+|   1.1.0   | 1.7         |
+|   1.0.0   | 1.7         |
 
 
 &nbsp;
