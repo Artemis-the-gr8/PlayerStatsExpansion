@@ -7,19 +7,19 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 public final class JoinAndQuitListener implements Listener {
 
-    private static StatCache statCache;
+    private static StatCache cache;
 
-    public JoinAndQuitListener() {
-        statCache = StatCache.getInstance();
+    public JoinAndQuitListener(StatCache statCache) {
+        cache = statCache;
     }
 
     @EventHandler
     public void onPlayerJoinEvent(PlayerJoinEvent event) {
-        statCache.addOnlinePlayer(event.getPlayer());
+        cache.addOnlinePlayer(event.getPlayer());
     }
 
     @EventHandler
     public void onPlayerQuitEvent(PlayerQuitEvent event) {
-        statCache.removeOnlinePlayer(event.getPlayer());
+        cache.removeOnlinePlayer(event.getPlayer());
     }
 }

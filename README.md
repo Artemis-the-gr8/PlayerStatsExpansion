@@ -10,7 +10,13 @@ For FAQ, also see the [Wiki](https://github.com/Artemis-the-gr8/PlayerStatsExpan
 
 ## Important Note about Usage
 
-For the placeholders to work, you need PlayerStats **version 1.7.2**!
+For the placeholders to work, you need a **matching PlayerStats version**! 
+| Expansion | PlayerStats |
+| --------- | ----------- |
+|   2.0.0   | 2 or above  |
+|   1.2.0   | 1.7.2       |
+|   1.1.0   | 1.7         |
+|   1.0.0   | 1.7         |
 
 
 &nbsp;
@@ -37,6 +43,7 @@ The available keywords are:
 - **selection**: 
     - `top: <n>` - get a single line from a top-statistic-list
     - `player: <player-name>` - get a player-statistic 
+    - `me` - get your own statistic
     - `server` - get a server-statistic
     - `title` - get a pretty name for a statistic
         - `title: <n>` - get a pretty name for a top-n-statistic list
@@ -52,6 +59,7 @@ So, some examples of valid placeholders would be:
 * %playerstats_ server, animals_bred%
 * %playerstats_ title: 3, cake_slices_eaten%
 * %playerstats_ top: 5, deaths%
+* %playerstats_ me, jump%
 * %playerstats_ only:number, player: Artemis_the_gr8, mine_block: diorite%
 * %playerstats_ only:player_name, player: Artemis_the_gr8, break_item: diamond_sword%
 ```

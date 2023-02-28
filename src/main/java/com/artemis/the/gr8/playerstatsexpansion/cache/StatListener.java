@@ -9,10 +9,10 @@ import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 
 public final class StatListener implements Listener {
 
-    private static StatCache statCache;
+    private static StatCache cache;
 
-    public StatListener() {
-        statCache = StatCache.getInstance();
+    public StatListener(StatCache statCache) {
+        cache = statCache;
     }
 
     @EventHandler
@@ -21,8 +21,8 @@ public final class StatListener implements Listener {
         String playerName = event.getPlayer().getName();
         int newValue = event.getNewValue();
 
-        if (statCache.hasRecordOf(statType)) {
-            statCache.updateValue(statType, playerName, newValue);
+        if (cache.hasRecordOf(statType)) {
+            cache.updateValue(statType, playerName, newValue);
         }
     }
 

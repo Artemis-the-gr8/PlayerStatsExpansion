@@ -1,6 +1,6 @@
 package com.artemis.the.gr8.playerstatsexpansion.datamodels;
 
-import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
+import com.artemis.the.gr8.playerstats.api.StatRequest;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
@@ -9,12 +9,13 @@ import org.jetbrains.annotations.Nullable;
 public record StatType(Statistic statistic, @Nullable Material material, @Nullable EntityType entityType) {
 
     public static StatType fromRequest(StatRequest<?> request) {
-        Statistic stat = request.getStatisticSetting();
+        StatRequest.Settings settings = request.getSettings();
+        Statistic stat = settings.getStatistic();
         return switch (stat.getType()) {
             case UNTYPED -> new StatType(stat, null, null);
-            case BLOCK -> new StatType(stat, request.getBlockSetting(), null);
-            case ITEM -> new StatType(stat, request.getItemSetting(), null);
-            case ENTITY -> new StatType(stat, null, request.getEntitySetting());
+            case BLOCK -> new StatType(stat, settings.getBlock(), null);
+            case ITEM -> new StatType(stat, settings.getItem(), null);
+            case ENTITY -> new StatType(stat, null, settings.getEntity());
         };
     }
 

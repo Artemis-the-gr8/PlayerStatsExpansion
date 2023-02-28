@@ -1,16 +1,11 @@
 package com.artemis.the.gr8.playerstatsexpansion;
 
-import com.artemis.the.gr8.lib.kyori.adventure.text.Component;
-import com.artemis.the.gr8.lib.kyori.adventure.text.TextComponent;
-import com.artemis.the.gr8.lib.kyori.adventure.text.format.TextColor;
-import com.artemis.the.gr8.lib.kyori.adventure.text.minimessage.MiniMessage;
-import com.artemis.the.gr8.playerstats.api.ApiFormatter;
-import com.artemis.the.gr8.playerstats.api.PlayerStats;
-import com.artemis.the.gr8.playerstats.api.StatManager;
-import com.artemis.the.gr8.playerstats.enums.Unit;
-import com.artemis.the.gr8.playerstats.msg.msgutils.NumberFormatter;
-import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
-import com.artemis.the.gr8.playerstats.statistic.result.StatResult;
+import com.artemis.the.gr8.playerstats.api.*;
+import com.artemis.the.gr8.playerstats.api.enums.Unit;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.Component;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.TextComponent;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.format.TextColor;
+import com.artemis.the.gr8.playerstats.lib.kyori.adventure.text.minimessage.MiniMessage;
 import com.artemis.the.gr8.playerstatsexpansion.cache.JoinAndQuitListener;
 import com.artemis.the.gr8.playerstatsexpansion.cache.StatCache;
 import com.artemis.the.gr8.playerstatsexpansion.cache.StatListener;
@@ -20,6 +15,7 @@ import com.artemis.the.gr8.playerstatsexpansion.datamodels.StatType;
 import me.clip.placeholderapi.PlaceholderAPIPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Statistic;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +26,9 @@ import java.util.concurrent.CompletableFuture;
 
 public class PlaceholderProvider {
 
-    private static ApiFormatter statFormatter;
+    private static StatManager statManager;
+    private static StatTextFormatter statFormatter;
+    private static StatNumberFormatter numberFormatter;
 
     private final Config config;
     private final RequestHandler requestHandler;
@@ -39,12 +37,13 @@ public class PlaceholderProvider {
     private JoinAndQuitListener joinAndQuitListener;
 
     public PlaceholderProvider(@NotNull PlayerStats playerStats) {
-        StatManager statManager = playerStats.getStatManager();
-        statFormatter = playerStats.getFormatter();
+        statManager = playerStats.getStatManager();
+        statFormatter = playerStats.getStatTextFormatter();
+        numberFormatter = playerStats.getStatNumberFormatter();
 
         config = PlayerStatsExpansion.getConfig();
         requestHandler = new RequestHandler(statManager);
-        statCache = StatCache.getInstance();
+        statCache = new StatCache(statManager);
 
         registerListeners();
     }
@@ -56,7 +55,7 @@ public class PlaceholderProvider {
         unregisterListeners();
     }
 
-    public String onRequest(String args) {
+    public String onRequest(OfflinePlayer player, String args) {
         TextComponent prefix = switch (args) {
             case "prefix" -> statFormatter.getPluginPrefix();
             case "rainbowprefix" -> statFormatter.getRainbowPluginPrefix();
@@ -70,23 +69,20 @@ public class PlaceholderProvider {
             return componentToString(prefix);
         }
         try {
-            return getStatResult(args);
+            return getStatResult(player, args);
         } catch (Exception | Error e) {
-            MyLogger.logWarning("An error has occurred! " +
-                    "To fix it, first make sure you are using version " + PlayerStatsExpansion.matchingPlayerStatsVersion + " of PlayerStats, " +
-                    "which can be found here: https://www.spigotmc.org/resources/playerstats.102347/ " +
-                    "\n" + "If the error persists, create an issue on the PlayerStatsExpansion GitHub." +
+            MyLogger.logWarning(e +
                     "\n" +
-                    "\n" + e);
-
+                    "Make sure you are using PlayerStats v" + PlayerStatsExpansion.NEEDED_PLAYERSTATS_API_VERSION + "! " +
+                    "If the error persists, create an issue on the PlayerStatsExpansion GitHub.");
             return null;
         }
     }
 
-    private @Nullable String getStatResult(String args) {
+    private @Nullable String getStatResult(OfflinePlayer player, String args) {
         ProcessedArgs processedArgs;
         try {
-            processedArgs = new ProcessedArgs(args);
+            processedArgs = new ProcessedArgs(player, args);
         } catch (IllegalArgumentException e) {
             return null;
         }
@@ -127,17 +123,21 @@ public class PlaceholderProvider {
         if (playerRequest == null) {
             return null;
         }
-        updateCache(playerRequest);
+        else if (!playerRequest.isValid()) {
+            return ChatColor.DARK_GRAY + "-";
+        }
 
         StatType statType = StatType.fromRequest(playerRequest);
-        LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
         int stat;
-        if (linkedResult != null) {
-            stat = linkedResult.get(args.playerName());
+        if (statManager.isExcludedPlayer(args.playerName())) {
+            stat = statManager.executePlayerStatRequest(playerRequest).value();
         }
         else {
-            StatResult<Integer> result = playerRequest.execute();
-            stat = result.getNumericalValue();
+            updateCache(playerRequest);
+            LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+            stat = linkedResult != null ?
+                    linkedResult.get(args.playerName()) :
+                    statManager.executePlayerStatRequest(playerRequest).value();
         }
 
         if (args.getNumberOnly()) {
@@ -219,11 +219,11 @@ public class PlaceholderProvider {
     }
 
     private void saveToCache(@NotNull StatRequest<?> statRequest) {
-        MyLogger.logInfo("Storing " + statRequest.getStatisticSetting() + " in the cache...");
+        MyLogger.logInfo("Storing " + statRequest.getSettings().getStatistic() + " in the cache...");
         StatRequest<LinkedHashMap<String, Integer>> newRequest = requestHandler.transformIntoTotalTopRequest(statRequest);
         final CompletableFuture<LinkedStatResult> future =
                 CompletableFuture.supplyAsync(() ->
-                        new LinkedStatResult(newRequest.execute().getNumericalValue())
+                        new LinkedStatResult(statManager.executeTopRequest(newRequest).value())
                 );
 
         StatType statType = StatType.fromRequest(newRequest);
@@ -292,11 +292,10 @@ public class PlaceholderProvider {
     }
 
     private String getFormattedNumber(long statNumber, @NotNull StatType statType) {
-        NumberFormatter numberFormatter = statFormatter.getNumberFormatter();
         Unit.Type unitType = Unit.getTypeFromStatistic(statType.statistic());
 
         return switch (unitType) {
-            case UNTYPED -> numberFormatter.formatNumber(statNumber);
+            case UNTYPED -> numberFormatter.formatDefaultNumber(statNumber);
             case TIME -> {
                 Unit bigTimeUnit = Unit.getMostSuitableUnit(unitType, statNumber);
                 Unit bigUnit = isNotTooBig(bigTimeUnit) ? bigTimeUnit : config.maxTimeUnit;
@@ -348,7 +347,7 @@ public class PlaceholderProvider {
         if (component == null) {
             return null;
         }
-        return statFormatter.TextComponentToString(component);
+        return statFormatter.textComponentToString(component);
     }
 
     private String processingMessage() {
@@ -362,12 +361,12 @@ public class PlaceholderProvider {
 
     private void registerListeners() {
         if (statListener == null) {
-            statListener = new StatListener();
+            statListener = new StatListener(statCache);
             Bukkit.getPluginManager().registerEvents(
                     statListener, PlaceholderAPIPlugin.getInstance());
         }
         if (joinAndQuitListener == null) {
-            joinAndQuitListener = new JoinAndQuitListener();
+            joinAndQuitListener = new JoinAndQuitListener(statCache);
             Bukkit.getPluginManager().registerEvents(
                     joinAndQuitListener, PlaceholderAPIPlugin.getInstance());
         }

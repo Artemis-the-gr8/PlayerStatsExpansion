@@ -26,12 +26,12 @@ public final class MyLogger {
     }
 
     public static void playerStatsVersionError() {
-        myLogger.warning("For PlayerStatsExpansion v" + PlayerStatsExpansion.expansionVersion + " to work, " +
-                "you need PlayerStats v" + PlayerStatsExpansion.matchingPlayerStatsVersion + "!" +
-                "\n" + "If you are using a newer version of PlayerStats, check if there is an updated version " +
-                        "of the expansion here: https://api.extendedclip.com/expansions/playerstatsexpansion/" +
-                "\n" + "Otherwise, download v" + PlayerStatsExpansion.matchingPlayerStatsVersion +
-                " of PlayerStats here: https://www.spigotmc.org/resources/playerstats.102347/");
+        myLogger.warning("You are using PlayerStatsExpansion v" + PlayerStatsExpansion.VERSION + ", " +
+                "which needs PlayerStats v" + PlayerStatsExpansion.NEEDED_PLAYERSTATS_API_VERSION + " to work!" +
+                "\n" + "If you are using a newer version of PlayerStats, you need to update the expansion as well, " +
+                        "which you can find here: "+ "\n" + "https://api.extendedclip.com/expansions/playerstatsexpansion/" +
+                "\n" + "Otherwise, update PlayerStats to v" + PlayerStatsExpansion.NEEDED_PLAYERSTATS_API_VERSION +
+                " from here: https://www.spigotmc.org/resources/playerstats.102347/");
     }
 
     public static void clear() {

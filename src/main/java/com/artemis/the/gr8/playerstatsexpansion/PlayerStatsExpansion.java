@@ -16,8 +16,8 @@ import java.util.Map;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    final static String expansionVersion = "1.2.0";
-    final static String matchingPlayerStatsVersion = "1.8";
+    final static String VERSION = "2.0.0";
+    final static String NEEDED_PLAYERSTATS_API_VERSION = "2";
     private static PlayerStatsExpansion instance;
     private static Config config;
     private PlaceholderProvider placeholderProvider;
@@ -34,7 +34,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     @Override
     public @NotNull String getVersion() {
-        return expansionVersion;
+        return VERSION;
     }
 
     @Override
@@ -68,7 +68,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         Plugin plugin = Bukkit.getPluginManager().getPlugin("PlayerStats");
         if (plugin != null) {
             String version = plugin.getDescription().getVersion();
-            if (version.equalsIgnoreCase(matchingPlayerStatsVersion)) {
+            if (version.startsWith(NEEDED_PLAYERSTATS_API_VERSION)) {
                 return true;
             }
         }
@@ -114,6 +114,6 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         if (placeholderProvider == null) {
             return null;
         }
-        return placeholderProvider.onRequest(args);
+        return placeholderProvider.onRequest(player, args);
     }
 }

@@ -2,7 +2,7 @@ package com.artemis.the.gr8.playerstatsexpansion;
 
 import com.artemis.the.gr8.playerstats.api.RequestGenerator;
 import com.artemis.the.gr8.playerstats.api.StatManager;
-import com.artemis.the.gr8.playerstats.statistic.request.StatRequest;
+import com.artemis.the.gr8.playerstats.api.StatRequest;
 import com.artemis.the.gr8.playerstatsexpansion.datamodels.ProcessedArgs;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
@@ -14,10 +14,10 @@ import java.util.LinkedHashMap;
 
 public final class RequestHandler {
 
-    private final StatManager statManager;
+    private static StatManager statManager;
 
     public RequestHandler(StatManager statManager) {
-        this.statManager = statManager;
+        RequestHandler.statManager = statManager;
     }
 
     public @Nullable StatRequest<Integer> getPlayerRequest(@NotNull ProcessedArgs processedArgs) {
@@ -27,40 +27,42 @@ public final class RequestHandler {
             return null;
         }
 
-        RequestGenerator<Integer> requestGenerator = statManager.playerStatRequest(playerName);
+        RequestGenerator<Integer> requestGenerator = statManager.createPlayerStatRequest(playerName);
         return createRequest(requestGenerator, processedArgs);
     }
 
     public @Nullable StatRequest<Long> getServerRequest(ProcessedArgs processedArgs) {
-        RequestGenerator<Long> requestGenerator = statManager.serverStatRequest();
+        RequestGenerator<Long> requestGenerator = statManager.createServerStatRequest();
         return createRequest(requestGenerator, processedArgs);
     }
 
     public @Nullable StatRequest<LinkedHashMap<String, Integer>> getTopRequest(@NotNull ProcessedArgs processedArgs) {
         int topListSize = processedArgs.topListSize();
 
-        RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.topStatRequest(topListSize);
+        RequestGenerator<LinkedHashMap<String, Integer>> requestGenerator = statManager.createTopStatRequest(topListSize);
         return createRequest(requestGenerator, processedArgs);
     }
 
     public StatRequest<LinkedHashMap<String, Integer>> transformIntoTotalTopRequest(@NotNull StatRequest<?> statRequest) {
-        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.totalTopStatRequest();
-        Statistic stat = statRequest.getStatisticSetting();
+        RequestGenerator<LinkedHashMap<String, Integer>> generator = statManager.createTotalTopStatRequest();
+        StatRequest.Settings settings = statRequest.getSettings();
+
+        Statistic stat = settings.getStatistic();
         return switch (stat.getType()) {
             case UNTYPED -> generator.untyped(stat);
             case ENTITY -> {
-                if (statRequest.getEntitySetting() != null) {
-                    yield generator.entityType(stat, statRequest.getEntitySetting());
+                if (settings.getEntity() != null) {
+                    yield generator.entityType(stat, settings.getEntity());
                 } else {
                     yield null;
                 }
             }
             case BLOCK, ITEM -> {
                 Material material = null;
-                if (statRequest.getBlockSetting() != null) {
-                    material = statRequest.getBlockSetting();
-                } else if (statRequest.getItemSetting() != null) {
-                    material = statRequest.getItemSetting();
+                if (settings.getBlock() != null) {
+                    material = settings.getBlock();
+                } else if (settings.getItem() != null) {
+                    material = settings.getItem();
                 }
                 if (material != null) {
                     yield generator.blockOrItemType(stat, material);
