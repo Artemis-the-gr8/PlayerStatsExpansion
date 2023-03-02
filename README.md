@@ -26,7 +26,7 @@ For the placeholders to work, you need a **matching PlayerStats version**!
 * Each placeholder starts with `%playerstats_`
 * The different keywords of a placeholder are separated by **commas**: 
     - `%playerstats_ x, y, z%`
-* If a keyword requires an additional argument, the keyword is followed by the argument with a **colon** in between: 
+* If a keyword requires an additional argument, the keyword is followed by the argument with "**:**" in between: 
     - `%playerstats_ x:1, y, z%`
 * Whitespaces are allowed
 
@@ -36,11 +36,7 @@ For the placeholders to work, you need a **matching PlayerStats version**!
 ## Keywords
 
 The available keywords are:
-- `only: <arg>` - an optional keyword signalling that only a part of the stat-lookup should be displayed, without the other information. The options are:
-    - `only:number` - get only the statistic number, with the formatting as specified in the PlaceholderAPI config
-    - `only:number_raw` - get only the statistic number, stripped of any formatting and color.
-    - `only:player_name` - get the name of the player that is on this position of the top-list, with the color as specified in the PlaceholderAPI config
-- **selection**: 
+- **selection** (choose one): 
     - `top: <n>` - get a single line from a top-statistic-list
     - `player: <player-name>` - get a player-statistic 
     - `me` - get your own statistic
@@ -48,7 +44,11 @@ The available keywords are:
     - `title` - get a pretty name for a statistic
         - `title: <n>` - get a pretty name for a top-n-statistic list
 - **statistic**: 
-    - `name: sub-name` - see [Statistic Choices](#statistic-choices) for more information
+    - `name: sub-name` - see [Statistic Choices](#statistic-choices) for all the options
+- `only: <arg>` - an *optional* keyword signalling that only a part of the stat-lookup should be displayed, without the other information. The options are:
+    - `only:number` - get only the statistic number, with the formatting as specified in the PlaceholderAPI config
+    - `only:number_raw` - get only the statistic number, stripped of any formatting and color.
+    - `only:player_name` - get the name of the player that is on this position of the top-list, with the color as specified in the PlaceholderAPI config
 
 &nbsp;
 
