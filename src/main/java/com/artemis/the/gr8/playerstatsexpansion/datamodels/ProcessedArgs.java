@@ -39,10 +39,6 @@ public final class ProcessedArgs {
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
     }
 
-//    (title(:n)),   (only: <number(_raw)|player_name)>,   top: <n>,  stat_name(:sub_stat_name)
-//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
-//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
-//    (title(:n)),   (only:number(_raw)|player_name),   top:n,  stat_name(:sub_stat_name)
     public ProcessedArgs(OfflinePlayer player, String args) throws IllegalArgumentException {
         String[] argsToProcess = splitAroundCommas(args);
         String[] whiteSpaceStrippedArgs = stripWhiteSpaces(argsToProcess);
