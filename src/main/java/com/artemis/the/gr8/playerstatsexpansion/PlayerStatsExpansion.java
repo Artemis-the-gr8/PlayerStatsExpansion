@@ -16,7 +16,7 @@ import java.util.Map;
 
 public final class PlayerStatsExpansion extends PlaceholderExpansion implements Configurable, Cacheable {
 
-    final static String VERSION = "2.0.0";
+    final static String VERSION = "2.0.2";
     final static String NEEDED_PLAYERSTATS_API_VERSION = "2";
     private static PlayerStatsExpansion instance;
     private static Config config;
@@ -110,7 +110,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
 
     /**format: %playerstats_ (only:number(_raw)|player_name), target(:arg), stat_name:sub_stat_name% */
     @Override
-    public @Nullable String onRequest(OfflinePlayer player, String args) {
+    public @Nullable String onRequest(OfflinePlayer player, @NotNull String args) {
         if (placeholderProvider == null) {
             return null;
         }

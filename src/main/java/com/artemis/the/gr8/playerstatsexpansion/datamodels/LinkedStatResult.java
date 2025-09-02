@@ -22,8 +22,8 @@ public final class LinkedStatResult {
         }
 
         int higherValue = statResult.get(playerNames.get(index-1));
-        int lowerValue = statResult.get(playerNames.get(index+1));
-        if (statNumber <= higherValue && statNumber >= lowerValue) {
+
+        if (statNumber <= higherValue) {
             return;
         }
 
