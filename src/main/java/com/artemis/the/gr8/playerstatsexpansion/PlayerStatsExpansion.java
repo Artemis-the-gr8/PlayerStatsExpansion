@@ -54,6 +54,7 @@ public final class PlayerStatsExpansion extends PlaceholderExpansion implements 
         configValues.put("display.processing_message_color", "#ADE7FF");
         configValues.put("display.only_player_name_color", "");
         configValues.put("display.only_stat_number_color", "");
+        configValues.put("display.only_position_number_color", "");
 
         return configValues;
     }

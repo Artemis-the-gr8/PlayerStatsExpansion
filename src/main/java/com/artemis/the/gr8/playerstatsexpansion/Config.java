@@ -28,6 +28,7 @@ public class Config {
     protected final @Nullable TextColor processingMsgColor;
     protected final @Nullable TextColor playerNameColor;
     protected final @Nullable TextColor statNumberColor;
+    protected final @Nullable TextColor positionNumberColor;
 
     public Config(@NotNull PlayerStatsExpansion expansion) {
         chatColorCode = Pattern.compile("(?<=&)(\\d|[a-f]|[k-o])");
@@ -43,6 +44,7 @@ public class Config {
         processingMsgColor = getColor(expansion.getString("display.processing_message_color", "#ADE7FF"));
         playerNameColor = getColor(expansion.getString("display.only_player_name_color", ""));
         statNumberColor = getColor(expansion.getString("display.only_stat_number_color", ""));
+        positionNumberColor = getColor(expansion.getString("display.only_position_number_color", ""));
     }
 
     public double getDistanceUpdateSetting() {

@@ -25,6 +25,7 @@ public final class ProcessedArgs {
     private boolean isNumberRequest;
     private boolean numberRequestIsRaw;
     private boolean isPlayerNameRequest;
+    private boolean isPlayerPositionRequest;
 
     private Target target;
     private int topListSize;
@@ -33,7 +34,7 @@ public final class ProcessedArgs {
     private final String[] statIdentifiers;
 
     static {
-        targetPattern = Pattern.compile("(title)|(top:)|(player:)|(server)|(me)");
+        targetPattern = Pattern.compile("(title)|(top:)|(position:)|(player:)|(server)|(me)");
         targetTitlePattern = Pattern.compile("(title):?(\\d+)?");
         targetTopArgPattern = Pattern.compile("(?<=:)\\d+");
         targetPlayerArgPattern = Pattern.compile("(?<=:)\\w{3,16}");
@@ -60,6 +61,10 @@ public final class ProcessedArgs {
 
     public boolean getPlayerNameOnly() {
         return isPlayerNameRequest;
+    }
+
+    public boolean getPlayerPositionOnly() {
+        return isPlayerPositionRequest;
     }
 
     public Target target() {
@@ -160,6 +165,11 @@ public final class ProcessedArgs {
                 else if (arg.contains("player:")) {
                     target = Target.PLAYER;
                     playerName = findPlayerName(arg);
+                }
+                else if (arg.startsWith("position:")) {
+                    target = Target.PLAYER;
+                    playerName = findPlayerName(arg);
+                    isPlayerPositionRequest = true;
                 }
                 else if (targetTitlePattern.matcher(arg).find()) {
                     isTitleRequest = true;

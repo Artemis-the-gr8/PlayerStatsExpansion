@@ -39,16 +39,18 @@ The available keywords are:
 - **selection** (choose one): 
     - `top: <n>` - get a single line from a top-statistic-list
     - `player: <player-name>` - get a player-statistic 
+    - `position: <player-name>` - get the specified player's place in a top-statistic-list
     - `me` - get your own statistic
     - `server` - get a server-statistic
     - `title` - get a pretty name for a statistic
         - `title: <n>` - get a pretty name for a top-n-statistic list
 - **statistic**: 
-    - `name: sub-name` - see [Statistic Choices](#statistic-choices) for all the options
+    - `name: sub_name` - see [Statistic Choices](#statistic-choices) for all the options
 - `only: <arg>` - an *optional* keyword signalling that only a part of the stat-lookup should be displayed, without the other information. The options are:
     - `only:number` - get only the statistic number, with the formatting as specified in the PlaceholderAPI config
-    - `only:number_raw` - get only the statistic number, stripped of any formatting and color.
-    - `only:player_name` - get the name of the player that is on this position of the top-list, with the color as specified in the PlaceholderAPI config
+    - `only:number_raw` - get only the statistic number, stripped of any formatting and color
+    - `only:player_name` - get the name of the specified player, with the color as specified in the PlaceholderAPI config. 
+If this is used with a `top: <n>` placeholder, the name of the player at position `n` will be shown
 
 &nbsp;
 
@@ -123,6 +125,18 @@ In this example, you can see that the statistic does not have a sub-statistic, s
 
 &nbsp;
 
+### Position
+Shows the specified player's position in the leaderboard for the given statistic. 
+The color of this number can be changed with the setting for `only_position_number_color` in the PlayerStats section of the PlaceholderAPI config. 
+
+```
+%playerstats_ position: player-name, stat_name:sub_stat_name%
+
+# Example:
+%playerstats_ position: Artemis_the_gr8, kill_entity: pufferfish%
+```
+
+&nbsp;
 
 ### Title
 
@@ -285,5 +299,5 @@ The below picture includes the following placeholders:
 ```
 
 <p align="center">
-   <img src="src/main/resources/images/placeholders.png">
+   <img src="src/main/resources/images/placeholders.png" alt="This image demonstrates the placeholders listed above">
 </p>

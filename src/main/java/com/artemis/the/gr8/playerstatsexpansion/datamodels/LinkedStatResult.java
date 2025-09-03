@@ -55,6 +55,13 @@ public final class LinkedStatResult {
         return playerNames[index];
     }
 
+    public Integer getIndex(String key) {
+        if (statResult.containsKey(key)) {
+            return statResult.keySet().stream().toList().indexOf(key);
+        }
+        return 0;
+    }
+
     public long getSumOfAllValues() {
         List<Integer> numbers = statResult
                 .values()

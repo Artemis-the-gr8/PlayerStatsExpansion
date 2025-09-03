@@ -135,6 +135,11 @@ public class PlaceholderProvider {
         else {
             updateCache(playerRequest);
             LinkedStatResult linkedResult = statCache.tryToGetCompletableFutureResult(statType);
+            if (args.getPlayerPositionOnly()) {
+                return linkedResult == null ? processingMessage() :
+                        getColoredPositionNumber(linkedResult.getIndex(args.playerName()) + 1 + "");
+            }
+
             stat = linkedResult != null ?
                     linkedResult.get(args.playerName()) :
                     statManager.executePlayerStatRequest(playerRequest).value();
@@ -226,6 +231,7 @@ public class PlaceholderProvider {
                         new LinkedStatResult(statManager.executeTopRequest(newRequest).value())
                 );
 
+        assert newRequest != null;
         StatType statType = StatType.fromRequest(newRequest);
         statCache.add(statType, future);
     }
@@ -322,6 +328,15 @@ public class PlaceholderProvider {
         }
         TextComponent name = Component.text(playerName).color(color);
         return componentToString(name);
+    }
+
+    private String getColoredPositionNumber(String positionNumber) {
+        TextColor color = config.positionNumberColor;
+        if (color == null) {
+            return positionNumber;
+        }
+        TextComponent position = Component.text(positionNumber).color(color);
+        return componentToString(position);
     }
 
     private @Nullable Unit getDisplayUnitFromStatistic(Statistic statistic) {
